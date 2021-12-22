@@ -9,7 +9,9 @@ Rules:
   * You can chain merges in one turn
     * This could be a creating a 2 then a merging the 2 into a 3.
     * You can also perform what I call a "partner" merge. This is when a double block with values 1 and 2, for example, is placed and where the 1 merges with other ones to create a 2 and then that new 2 merges into it's 'partner' 2 to create a 3.
-      - caviat-- if the "partner" 2 has enough 2's around it to merge before the 1 block turns into a 2 then the "partner" will disregard the newly created two and merge solely with it's original neighbor 2's. The 1 will still merge into a 2 it just won't merge with the partner.
+      - caviat-- if the "partner" 2 has enough 2's around it to merge before the 1 block turns into a 2 then the "partner" will disregard the newly created two and merge solely with it's original neighbor 2's. The 1 will still merge into a 2 it just won't merge with the partner
+
+
 Scoring:
   * You get points for each block that's merged according to the number of the block
   * Multipliers occur when you chain a merge. One chain is a *2 multiplier, two chains is *3  and so on. The multipliers stack.
