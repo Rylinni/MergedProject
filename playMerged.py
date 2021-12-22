@@ -20,7 +20,7 @@ while len(moves) > 0:
     printOptions(moves)
     while True:
         try:
-            pick = int(input("Which move?"))
+            pick = int(input("Which move? Enter a number option."))
             move = moves[pick]
             break
         except:

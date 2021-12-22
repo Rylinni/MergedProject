@@ -212,4 +212,3 @@ class mergeGame:
 # move = ([1], [(0, 0)])
 game = mergeGame()
 moves = game.findLegalMoves()
-print('done')
