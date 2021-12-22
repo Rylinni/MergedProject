@@ -16,3 +16,8 @@ Scoring:
   * You get points for each block that's merged according to the number of the block
   * Multipliers occur when you chain a merge. One chain is a *2 multiplier, two chains is *3  and so on. The multipliers stack.
   * Partner merge-- caviat scoring is different. If you fail to do a proper partner merge then the game will only score your merge of the higher number. - this has not been 100% tested but from what I understand this is the case. I believe its a bug in the game.
+
+
+playMerged file:
+* play merged starts a game and gives a list of all the possible moves to play. Denoted by the values of the blocks in the first part and the coordinates of the blocks in the second part
+* Ex: ([1, 2], [(4,2), (4, 3)] -- This move puts a 1 value block in position 4, 2 which is the fifth row and the third column and a puts its partner 2 value block in position 4, 3 which is the fifth row and the fourth column.
