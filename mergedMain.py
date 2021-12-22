@@ -119,6 +119,8 @@ class mergeGame:
         self.multiplier *= self.merges
         if self.board[x][y] == 8:
             self.explode(x, y)
+        elif not self.board[x][y] in self.unlocks:
+            self.unlocks.append(self.board[x][y])
 
 
     def getIdenticals(self, value, coor, identicals, partner = None):
