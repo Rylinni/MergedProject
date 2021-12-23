@@ -7,17 +7,29 @@ import random
 
 
 class mergeGame:
-    def __init__(self, board = None, move = None):
+    def __init__(self, board = None, move = None, score = 0, unlocks = [1,2], piece = None):
         if board and move:
             self.board = board
-            self.score = 0
+            self.score = score
+            self.unlocks = unlocks
+            self.lastAllPiecesUpdate = [1]
             self.evalBoard(move)
+            
+        elif board and score and unlocks and piece:
+            self.board = board
+            self.score = score
+            self.unlocks = unlocks
+            self.nextPiece = piece
+            self.lastAllPiecesUpdate = [1]
         else:
             self.board = [[0 for x in range(5)] for y in range(5)]
             self.score = 0
-            self.unlocks = [1, 2]
+            self.allPieces = []
+            self.lastAllPiecesUpdate = [1]
+            self.unlocks = unlocks
             self.generateNextPiece()
     
+
     def playMove(self, move):
         values, coordinates = move
         if self.checkMoveViable(move):
@@ -27,6 +39,14 @@ class mergeGame:
             self.generateNextPiece()
         else:
             raise Exception("Invalid Move for current board")
+
+    def generateSuccessorBoard(self, move):
+        ghost = mergeGame(self.board, move, self.score, self.unlocks)
+        return ghost
+
+    def generateBoardNextPiece(self, piece):
+        ghost = mergeGame(self.board, score=self.score, unlocks=self.unlocks, piece=piece)
+        return ghost
 
     def checkMoveViable(self, move, insertMove = False):
         values, coordinates = move
@@ -41,8 +61,9 @@ class mergeGame:
             return False
         return self.board[x][y] == 0
 
-    def findLegalMoves(self):
-        piece = self.nextPiece
+    def findLegalMoves(self, piece=None):
+        if not piece:
+            piece = self.nextPiece
         # single piece
         viableMoves = []
         if len(piece) == 1:
@@ -71,7 +92,21 @@ class mergeGame:
                     buildAndCheck((i, j), (i, j+1))
         return viableMoves
                     
-
+    def allPossibleNextPieces(self):
+        usables = self.unlocks
+        if usables == self.lastAllPiecesUpdate:
+            return self.allPieces
+        else:
+            pieces = []
+            for x in usables:
+                for y in usables:
+                    if x == y:
+                        pieces.append([x])
+                    else:
+                        if not [y, x] in pieces:
+                            pieces.append([x, y])
+            self.allPieces = pieces
+            return pieces
 
     def generateNextPiece(self):
         usables = self.unlocks
@@ -121,6 +156,7 @@ class mergeGame:
             self.explode(x, y)
         elif not self.board[x][y] in self.unlocks:
             self.unlocks.append(self.board[x][y])
+            self.allPossibleNextPieces()
 
 
     def getIdenticals(self, value, coor, identicals, partner = None):
