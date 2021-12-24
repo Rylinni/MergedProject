@@ -7,7 +7,10 @@ import random
 
 
 class mergeGame:
-    def __init__(self, board = None, move = None, score = 0, unlocks = [1,2], piece = None):
+    def __init__(self, board = None, move = None, score = 0, unlocks = None, piece = None):
+        if unlocks is None:
+            unlocks = [1,2]
+            
         if board and move:
             self.board = board
             self.score = score
