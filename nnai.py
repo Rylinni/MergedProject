@@ -20,6 +20,7 @@ def get_rep(state):
 
 def get_last_training():
     files = os.listdir('training')
+    files.remove('.DS_Store')
     if len(files) == 0:
         last = 0
     else:
@@ -86,7 +87,6 @@ class NNAI():
             next_state = state.generateSuccessorBoard(mv)
             nnscore = self.inference(next_state)
             total_score = nnscore + next_state.score
-            print(f"Total Score: {total_score}")
             if total_score > max_score:
                 max_action = mv
                 max_score = total_score
