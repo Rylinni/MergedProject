@@ -8,7 +8,10 @@ import copy
 
 
 class mergeGame:
-    def __init__(self, board = [[0 for x in range(5)] for y in range(5)], move = None, score = 0, unlocks = None, piece = None):
+    def __init__(self, board = None, move = None, score = 0, unlocks = None, piece = None):
+        if board is None:
+            board = [[0 for x in range(5)] for y in range(5)]
+        
         if unlocks is None:
             unlocks = [1,2]
 
@@ -137,20 +140,44 @@ class mergeGame:
         right = y < len(self.board)
         if up:
             if left:
-                self.board[x-1][y-1] = 0
+                try:
+                    self.board[x-1][y-1] = 0
+                except IndexError:
+                    pass
             if right:
-                self.board[x-1][y+1] = 0
-            self.board[x-1][y] = 0
+                try:
+                    self.board[x-1][y+1] = 0
+                except IndexError:
+                    pass
+            try:
+                self.board[x-1][y] = 0
+            except IndexError:
+                pass
         if down:
             if left:
-                self.board[x+1][y-1] = 0
+                try:
+                    self.board[x+1][y-1] = 0
+                except IndexError:
+                    pass
             if right:
-                self.board[x+1][y+1] = 0
-            self.board[x+1][y] = 0
+                try:
+                    self.board[x+1][y+1] = 0
+                except IndexError:
+                    pass
+            try:
+                self.board[x+1][y] = 0
+            except IndexError:
+                pass
         if left:
-            self.board[x][y-1] = 0
+            try:
+                self.board[x][y-1] = 0
+            except IndexError:
+                pass
         if right:
-            self.board[x][y+1] = 0
+            try:
+                self.board[x][y+1] = 0
+            except IndexError:
+                pass
         self.board[x][y] = 0
 
 
