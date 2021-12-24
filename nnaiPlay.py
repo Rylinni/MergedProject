@@ -6,7 +6,7 @@ import os
 
 # Generate test data, fit, repeat
 def run_default(n=10, k=10):
-    agent = nnai.NNAI(filename='nnai.sav', epsilon=.02)
+    agent = nnai.NNAI(filename='nnai.sav', epsilon=.1)
     total_scores = []
     for match in range(n):
         print(f"Match {match+1}")

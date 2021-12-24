@@ -81,7 +81,9 @@ class NNAI():
         if len(moves) == 0:
             return state.score
         elif depth <= 0:
-            return state.score + self.inference(state)
+            nnscore = self.inference(state)
+            print(f"NNScore: {nnscore}")
+            return state.score + nnscore
         else:
             bestVal = -math.inf
             bestMove = None
