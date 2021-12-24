@@ -6,7 +6,8 @@ import os
 
 # Generate test data, fit, repeat
 def run_default(n=10, k=10):
-    agent = nnai.NNAI(filename='nnai.sav', epsilon=.02)
+    agent = nnai.NNAI(filename='nnai.sav', epsilon=.1)
+    total_scores = []
     for match in range(n):
         print(f"Match {match+1}")
         scores = []
@@ -16,7 +17,7 @@ def run_default(n=10, k=10):
                 moves = game.findLegalMoves()
                 while len(moves) > 0:
                     gameCopy = copy.deepcopy(game)
-                    move = agent.get_action(gameCopy, 2)
+                    move = agent.get_action(gameCopy, 1)
                     game.playMove(move)
                     moves = game.findLegalMoves()
                 agent.terminate_learn(game)
@@ -27,8 +28,11 @@ def run_default(n=10, k=10):
             agent.save_model()
             avg_score = statistics.mean(scores)
             print(f"Avg match score: {avg_score}")
+            total_scores.append(avg_score)
         except:
             print("There was an error.")
+    avg_score = statistics.mean(total_scores)
+    print(f"Avg total score: {avg_score}")
 
 # Load in all test data generated from training directory,
 # fit, and see what happens. Saves model to super_nnai.sav
@@ -36,7 +40,7 @@ def test_super():
     agent = nnai.NNAI()
     tm = os.listdir("training")
     print("Fitting...")
-    agent.fit(trainmulti=["training/" + x for x in tm], partial=False, layer_sizes=(100,100,100,100,100,100,100,100))
+    agent.fit(trainmulti=["training/" + x for x in tm], partial=False, layer_sizes=(500,500,500))
     k = 15
     scores = []
     print("Games starting...")
@@ -45,7 +49,7 @@ def test_super():
         moves = game.findLegalMoves()
         while len(moves) > 0:
             gameCopy = copy.deepcopy(game)
-            move = agent.get_action(gameCopy, 2)
+            move = agent.get_action(gameCopy, 1)
             game.playMove(move)
             moves = game.findLegalMoves()
         agent.terminate_learn(game)

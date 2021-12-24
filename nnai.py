@@ -70,35 +70,27 @@ class NNAI():
             self.add_state(game_state)
             return action
 
-        _, action = self.maxMove(game_state, depth)
+        action = self.max_move(game_state, depth)
         self.add_state(game_state)
         return action
     
-    def maxMove(self, state: mergeGame, depth) -> Tuple[float, Optional[Tuple]]:
+    def max_move(self, state: mergeGame, depth):
         
         moves = state.findLegalMoves()
 
-        if depth <= 0 or len(moves) == 0:
-            return state.score + self.inference(state)
-        else:
-            bestVal = -math.inf
-            bestMove = None
-            for move in moves:
-                val = self.averageMove(state.generateSuccessorBoard(move), depth-1)
-                if val > bestVal:
-                    bestVal = val
-                    bestMove = move
-        return (bestVal, bestMove)
-
-    def averageMove(self, state: mergeGame, depth):
-        pieces = state.allPossibleNextPieces()
-        sum = 0
-        for piece in pieces:
-            val = self.maxMove(state.generateBoardNextPiece(piece), depth-1)
-            if type(val) is tuple:
-                val , _ = val
-            sum += val
-        return sum / len(pieces)
+        if len(moves) == 0:
+            return None
+        max_action = None
+        max_score = -math.inf
+        for mv in moves:
+            next_state = state.generateSuccessorBoard(mv)
+            nnscore = self.inference(next_state)
+            total_score = nnscore + next_state.score
+            print(f"Total Score: {total_score}")
+            if total_score > max_score:
+                max_action = mv
+                max_score = total_score
+        return max_action
 
     def add_state(self, state):
         self.current_state_scores.append(state.score)
@@ -137,7 +129,7 @@ class NNAI():
             training = pickle.load(open(trainfilename, 'rb'))
         if self.model is None:
             if layer_sizes is None:
-                self.model = MLPRegressor(hidden_layer_sizes=(100,100,100))
+                self.model = MLPRegressor(hidden_layer_sizes=(200,200,200))
             else:
                 self.model = MLPRegressor(layer_sizes)
 
