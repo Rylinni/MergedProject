@@ -78,7 +78,9 @@ class NNAI():
         
         moves = state.findLegalMoves()
 
-        if depth <= 0 or len(moves) == 0:
+        if len(moves) == 0:
+            return state.score
+        elif depth <= 0:
             return state.score + self.inference(state)
         else:
             bestVal = -math.inf
@@ -92,13 +94,13 @@ class NNAI():
 
     def averageMove(self, state: mergeGame, depth):
         pieces = state.allPossibleNextPieces()
-        sum = 0
+        mysum = 0
         for piece in pieces:
-            val = self.maxMove(state.generateBoardNextPiece(piece), depth-1)
+            val = self.maxMove(state.generateBoardNextPiece(piece), depth)
             if type(val) is tuple:
                 val , _ = val
-            sum += val
-        return sum / len(pieces)
+            mysum += val
+        return mysum / len(pieces)
 
     def add_state(self, state):
         self.current_state_scores.append(state.score)
@@ -137,7 +139,7 @@ class NNAI():
             training = pickle.load(open(trainfilename, 'rb'))
         if self.model is None:
             if layer_sizes is None:
-                self.model = MLPRegressor(hidden_layer_sizes=(100,100,100))
+                self.model = MLPRegressor(hidden_layer_sizes=(200,200,200))
             else:
                 self.model = MLPRegressor(layer_sizes)
 
