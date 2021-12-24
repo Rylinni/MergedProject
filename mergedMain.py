@@ -4,10 +4,11 @@
 #             print(f" {num}", end='', flush=True)
 #         print()
 import random
+import copy
 
 
 class mergeGame:
-    def __init__(self, board = None, move = None, score = 0, unlocks = None, piece = None):
+    def __init__(self, board = [[0 for x in range(5)] for y in range(5)], move = None, score = 0, unlocks = None, piece = None):
         if unlocks is None:
             unlocks = [1,2]
             
@@ -25,8 +26,8 @@ class mergeGame:
             self.nextPiece = piece
             self.lastAllPiecesUpdate = [1]
         else:
-            self.board = [[0 for x in range(5)] for y in range(5)]
-            self.score = 0
+            self.board = board
+            self.score = score
             self.allPieces = []
             self.lastAllPiecesUpdate = [1]
             self.unlocks = unlocks
@@ -44,7 +45,9 @@ class mergeGame:
             raise Exception("Invalid Move for current board")
 
     def generateSuccessorBoard(self, move):
-        ghost = mergeGame(self.board, move, self.score, self.unlocks)
+        board = [[j for j in i] for i in self.board]
+        ghost = mergeGame(board=board, score=self.score, unlocks=self.unlocks)
+        ghost.playMove(move)
         return ghost
 
     def generateBoardNextPiece(self, piece):

@@ -8,8 +8,10 @@ class maxVsRand():
         return action
     
     def maxMove(self, state: mergeGame, depth) -> Tuple[float, Optional[Tuple]]:
+        if depth <= 0:
+            return state.score
         moves = state.findLegalMoves()
-        if depth <= 0 or len(moves) == 0:
+        if len(moves) == 0:
             return state.score
         else:
             bestVal = -math.inf
