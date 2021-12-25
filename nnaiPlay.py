@@ -6,8 +6,8 @@ import os
 import pickle
 
 # Generate test data, fit, repeat
-def run_default(n=10, k=10, epsilon=.05, filename='nnai.sav'):
-    agent = nnai.NNAI(filename=filename, epsilon=epsilon)
+def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai.sav'):
+    agent = nnai.NNAI(filename=filename, epsilon=epsilon, temperature=temperature)
     total_scores = []
     for match in range(n):
         print(f"Match {match+1}")
@@ -33,33 +33,6 @@ def run_default(n=10, k=10, epsilon=.05, filename='nnai.sav'):
     print(f"Avg total score: {avg_score}")
     return avg_score
 
-# Load in all test data generated from training directory,
-# fit, and see what happens. Saves model to super_nnai.sav
-def test_super():
-    agent = nnai.NNAI()
-    tm = os.listdir("training")
-    tm.remove('.DS_Store')
-    print("Fitting...")
-    agent.fit(trainmulti=["training/" + x for x in tm], partial=False, layer_sizes=(200,200,200,200,200))
-    k = 15
-    scores = []
-    print("Games starting...")
-    for _ in range(k):
-        game = mergedMain.mergeGame()
-        moves = game.findLegalMoves()
-        while len(moves) > 0:
-            gameCopy = copy.deepcopy(game)
-            move = agent.get_action(gameCopy, 1)
-            game.playMove(move)
-            moves = game.findLegalMoves()
-        agent.terminate_learn(game)
-        print(f"Score: {game.score}")
-        scores.append(game.score)
-    # Note: doesn't save fly training
-    agent.save_model(filename="super_nnai.sav")
-    avg_score = statistics.mean(scores)
-    print(f"Avg match score: {avg_score}")
-
 def draw_board(board):
     for row in board:
         for num in row:
@@ -68,14 +41,15 @@ def draw_board(board):
 
 # Observe nnai playing
 def observe(model='nnai.sav'):
-    agent = nnai.NNAI(filename=model)  # Epsilon is default, which is 0
+    agent = nnai.NNAI(filename=model)  # No exploration
 
     print("Model info:")
     print(f"Layers: {agent.model.n_layers_}, Outputs: {agent.model.out_activation_}")
     tm = os.listdir("training")
     tm.remove('.DS_Store')
     last = nnai.get_last_training()
-    trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-10]
+    # trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-10]
+    trainmulti=["training/" + x for x in tm]
     training = [[], []]
     for fname in trainmulti:
         train = pickle.load(open(fname, 'rb'))
@@ -97,19 +71,32 @@ def observe(model='nnai.sav'):
         print("Last move: " + str(move))
         print("Inference: " + str(agent.inference(game)))
         userin = input()
-        if userin == '^[' or userin == '^C':
+        if userin == 'q':
             return 0
         
         moves = game.findLegalMoves()
     print(f"Score: {game.score}")
 
+# Load in all test data generated from training directory,
+# fit, and see what happens. Saves model to super_nnai.sav
+def test_super():
+    agent = nnai.NNAI()
+    tm = os.listdir("training")
+    tm.remove('.DS_Store')
+    print("Fitting...")
+    last = nnai.get_last_training()
+    trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-50]
+    agent.fit(trainmulti=trainmulti, partial=False, layer_sizes=(200,200,200,200,200), max_iter=100)
+    agent.save_model(filename="super_nnai.sav")
+    observe(model='super_nnai.sav')
 
 if __name__ == '__main__':
 
-    run_default(n=25, filename=None)
+    run_default(n=50, filename='nnai.sav', temperature=2)
 
     observe()
-    exit(0)
+
+    # Note: next use super and train repeatedly on previous 50 files
 
     """
     scores = []

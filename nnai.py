@@ -18,12 +18,6 @@ def get_rep(state):
             board_rep.extend(square)
     return board_rep
 
-def draw_board(board):
-    for row in board:
-        for num in row:
-            print(f" {num}", end='', flush=True)
-        print()
-
 def get_last_training():
     files = os.listdir('training')
     files.remove('.DS_Store')
@@ -35,7 +29,7 @@ def get_last_training():
 
 class NNAI():
 
-    def __init__(self, filename=None, epsilon=None) -> None:
+    def __init__(self, filename=None, epsilon=None, temperature=None) -> None:
 
         """
 
@@ -52,6 +46,8 @@ class NNAI():
 
         # Probability with which alg chooses random move
         self.epsilon = epsilon
+        
+        self.temperature = temperature
 
         if filename is None:
             self.model = None
@@ -75,11 +71,34 @@ class NNAI():
             moves = game_state.findLegalMoves() 
             action = moves[random.randrange(0, len(moves))]
             self.add_state(game_state)
-            return action
-
-        action = self.max_move(game_state, depth)
-        self.add_state(game_state)
+        # Temperature induces use of softmax
+        elif self.temperature is None:
+            action = self.max_move(game_state, depth)
+            self.add_state(game_state)
+        else:
+            action = self.softmax_move(game_state, depth)
+            self.add_state(game_state)
         return action
+
+    def softmax_move(self, state: mergeGame, depth):
+        
+        moves = state.findLegalMoves()
+
+        if len(moves) == 0:
+            return None
+        mv_list = []
+        score_list = []
+        for mv in moves:
+            next_state = state.generateSuccessorBoard(mv)
+            nnscore = self.inference(next_state)
+            total_score = nnscore + next_state.score
+            mv_list.append(mv)
+            score_list.append(total_score)
+        # Normalize, apply softmax
+        total = sum([math.e**(x/self.temperature) for x in score_list])
+        score_list = [math.e**(x/self.temperature) / total for x in score_list]
+        probs = [x for x in score_list]
+        return mv_list[np.random.choice([i for i in range(len(mv_list))], p=probs)]
     
     def max_move(self, state: mergeGame, depth):
         
@@ -107,6 +126,7 @@ class NNAI():
             self.fly_training[0].append(self.current_states[ex])
             self.fly_training[1].append(state.score - self.current_state_scores[ex])
         self.current_states = []
+        self.current_state_scores = []
 
     def save_fly_training(self, filename=None):
         if filename is None:
@@ -121,7 +141,7 @@ class NNAI():
         res = self.model.predict([get_rep(state)])[0]
         return res
 
-    def fit(self, trainfilename=None, trainmulti=None, partial=True, layer_sizes=None):
+    def fit(self, trainfilename=None, trainmulti=None, partial=True, layer_sizes=None, max_iter=200):
         if trainmulti is not None:
             training = [[], []]
             for fname in trainmulti:
@@ -135,9 +155,9 @@ class NNAI():
             training = pickle.load(open(trainfilename, 'rb'))
         if self.model is None:
             if layer_sizes is None:
-                self.model = MLPRegressor(hidden_layer_sizes=(200,200,200))
+                self.model = MLPRegressor(hidden_layer_sizes=(500,500,500), learning_rate_init=.01)
             else:
-                self.model = MLPRegressor(layer_sizes)
+                self.model = MLPRegressor(hidden_layer_sizes=layer_sizes, max_iter=max_iter)
 
         if partial:
             self.model.partial_fit(X=training[0], y=training[1])
