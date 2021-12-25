@@ -18,6 +18,12 @@ def get_rep(state):
             board_rep.extend(square)
     return board_rep
 
+def draw_board(board):
+    for row in board:
+        for num in row:
+            print(f" {num}", end='', flush=True)
+        print()
+
 def get_last_training():
     files = os.listdir('training')
     files.remove('.DS_Store')
@@ -144,5 +150,6 @@ class NNAI():
     def save_model(self, filename='nnai.sav'):
         pickle.dump(self.model, open(filename, 'wb'))
 
+    
         
     
