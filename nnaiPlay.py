@@ -40,16 +40,16 @@ def draw_board(board):
         print()
 
 # Observe nnai playing
-def observe(model='nnai.sav'):
+def observe(model='nnai.sav', look_at=100):
     agent = nnai.NNAI(filename=model)  # No exploration
 
     print("Model info:")
-    print(f"Layers: {agent.model.n_layers_}, Outputs: {agent.model.out_activation_}")
+    print(f"Layers: {agent.model.n_layers_}, N-iter: {agent.model.n_iter_}, Max iter: {agent.model.max_iter}")
     tm = os.listdir("training")
     tm.remove('.DS_Store')
     last = nnai.get_last_training()
-    # trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-10]
-    trainmulti=["training/" + x for x in tm]
+    trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-100]
+    # trainmulti=["training/" + x for x in tm]
     training = [[], []]
     for fname in trainmulti:
         train = pickle.load(open(fname, 'rb'))
@@ -79,24 +79,69 @@ def observe(model='nnai.sav'):
 
 # Load in all test data generated from training directory,
 # fit, and see what happens. Saves model to super_nnai.sav
-def test_super():
-    agent = nnai.NNAI()
+def test_super(filename=None, max_iter=100, replace_max_iter=False, look_at=100):
+    agent = nnai.NNAI(filename=filename)
+    if replace_max_iter:
+        agent.model.max_iter = max_iter
     tm = os.listdir("training")
     tm.remove('.DS_Store')
     print("Fitting...")
     last = nnai.get_last_training()
-    trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-50]
-    agent.fit(trainmulti=trainmulti, partial=False, layer_sizes=(200,200,200,200,200), max_iter=100)
+    trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-look_at]
+    agent.fit(trainmulti=trainmulti, partial=False, layer_sizes=(200,200,200,200,200), max_iter=max_iter)
     agent.save_model(filename="super_nnai.sav")
     observe(model='super_nnai.sav')
 
+def eval_model(model='nnai.sav', look_at=75, games=100):
+    agent = nnai.NNAI(filename=model)  # No exploration
+
+    print("Model info:")
+    print(f"Layers: {agent.model.n_layers_}, N-iter: {agent.model.n_iter_}, Max iter: {agent.model.max_iter}")
+    print("Scoring...")
+    tm = os.listdir("training")
+    tm.remove('.DS_Store')
+    last = nnai.get_last_training()
+    trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-look_at]
+    training = [[], []]
+    for fname in trainmulti:
+        train = pickle.load(open(fname, 'rb'))
+        training[0].extend(train[0])
+        training[1].extend(train[1])
+    model_score = agent.model.score(training[0], training[1])
+    print(f"Model score: {model_score}")
+    
+    scores = []
+    for i in range(games):
+        if i % 20 == 0:
+            print(f"Game #{i}")
+        game = mergedMain.mergeGame()
+        moves = game.findLegalMoves()
+        while len(moves) > 0:
+            game_copy = copy.deepcopy(game)
+            move = agent.get_action(game_copy, 1)
+            game.playMove(move)
+            moves = game.findLegalMoves()
+        scores.append(game.score)
+
+    avg = statistics.mean(scores)
+    my_max = max(scores)
+    print(f"Average performance: {avg}")
+    print(f"High score: {my_max}")
+
 if __name__ == '__main__':
 
-    run_default(n=50, filename='nnai.sav', temperature=2)
+    # eval_model(model='nnai.sav', games=50, look_at=75)
 
+    # test_super(filename='nnai.sav', replace_max_iter=True)
+
+    run_default(n=100, filename='nnai.sav', temperature=2)
+    run_default(n=100, filename='nnai.sav')
     observe()
 
-    # Note: next use super and train repeatedly on previous 50 files
+    test_super(filename='nnai.sav', replace_max_iter=True)
+
+    eval_model(model='nnai.sav', look_at=100)
+    eval_model(model='super_nnai.sav', look_at=100)
 
     """
     scores = []
