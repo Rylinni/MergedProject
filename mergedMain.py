@@ -121,11 +121,24 @@ class mergeGame:
         usables = self.unlocks
         random.shuffle(usables)
         nextPiece = [usables[0]]
-        if random.randrange(2) == 1:
+        if random.randrange(2) == 1 and self.roomForDouble():
             nextPiece.append(usables[1])
         self.nextPiece = nextPiece
 
-        
+    def roomForDouble(self):
+        bd = self.board
+        for x in range(len(bd)-1)[1:]:
+            for y in range(len(bd)-1)[1:]:
+                if bd[x][y] == 0:
+                    if bd[x-1][y]:
+                        return True
+                    if bd[x+1][y]:
+                        return True
+                    if bd[x][y-1]:
+                        return True
+                    if bd[x][y+1]:
+                        return True
+        return False
 
     def oneOfAKind(self, ls1, ls2):
         for x in ls2:
