@@ -135,7 +135,7 @@ if __name__ == '__main__':
 
     run_default(n=150, filename='nnai.sav', temperature=4)
     run_default(n=200, filename='nnai.sav')
-    observe()
+    # observe()
 
     eval_model(model='nnai.sav', look_at=50, games=200)
 
