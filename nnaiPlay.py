@@ -6,7 +6,7 @@ import os
 import pickle
 
 # Generate test data, fit, repeat
-def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai.sav'):
+def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai.sav', outfilename='nnai.sav'):
     agent = nnai.NNAI(filename=filename, epsilon=epsilon, temperature=temperature)
     total_scores = []
     for match in range(n):
@@ -25,7 +25,7 @@ def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai.sav')
             scores.append(game.score)
         agent.save_fly_training()
         agent.fit()
-        agent.save_model()
+        agent.save_model(filename=outfilename)
         avg_score = statistics.mean(scores)
         print(f"Avg match score: {avg_score}")
         total_scores.append(avg_score)
@@ -79,7 +79,7 @@ def observe(model='nnai.sav', look_at=100):
 
 # Load in all test data generated from training directory,
 # fit, and see what happens. Saves model to super_nnai.sav
-def test_super(filename=None, max_iter=100, replace_max_iter=False, look_at=100):
+def test_super(filename=None, max_iter=100, replace_max_iter=False, look_at=100, outfilename='super_nnai.sav'):
     agent = nnai.NNAI(filename=filename)
     if replace_max_iter:
         agent.model.max_iter = max_iter
@@ -89,8 +89,8 @@ def test_super(filename=None, max_iter=100, replace_max_iter=False, look_at=100)
     last = nnai.get_last_training()
     trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-look_at]
     agent.fit(trainmulti=trainmulti, partial=False, layer_sizes=(200,200,200,200,200), max_iter=max_iter)
-    agent.save_model(filename="super_nnai.sav")
-    observe(model='super_nnai.sav')
+    agent.save_model(filename=outfilename)
+    observe(model=outfilename)
 
 def eval_model(model='nnai.sav', look_at=75, games=100):
     agent = nnai.NNAI(filename=model)  # No exploration
@@ -134,14 +134,12 @@ if __name__ == '__main__':
 
     # test_super(filename='nnai.sav', replace_max_iter=True)
 
-    run_default(n=100, filename='nnai.sav', temperature=2)
-    run_default(n=100, filename='nnai.sav')
+    # run_default(n=100, filename='nnai.sav', temperature=5)
+    run_default(n=100, filename='nnai.sav', temperature=1)
+    run_default(n=200, filename='nnai.sav')
     observe()
 
-    test_super(filename='nnai.sav', replace_max_iter=True)
-
-    eval_model(model='nnai.sav', look_at=100)
-    eval_model(model='super_nnai.sav', look_at=100)
+    eval_model(model='nnai.sav', look_at=150)
 
     """
     scores = []

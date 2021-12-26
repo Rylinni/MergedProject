@@ -31,19 +31,6 @@ class NNAI():
 
     def __init__(self, filename=None, epsilon=None, temperature=None) -> None:
 
-        """
-
-        Plan:
-
-        - Simulate games
-        - For each move, there will be a call to get_action, then add_state
-        - When a game is over, terminate_learn is called with the actual points
-        - ---> The current states with actual points get added to fly_training
-        - ---> After x number of games, the data are moved into local storage
-        - ---> After kx games, the data are fit to a model, which is stored
-
-        """
-
         # Probability with which alg chooses random move
         self.epsilon = epsilon
         
@@ -63,6 +50,9 @@ class NNAI():
         self.current_states = []
 
         self.current_state_scores = []
+
+        # Purely for debugging
+        self.softmax_calls = 0
 
     def get_action(self, game_state: mergeGame, depth):
 
@@ -97,8 +87,26 @@ class NNAI():
         # Normalize, apply softmax
         total = sum([math.e**(x/self.temperature) for x in score_list])
         score_list = [math.e**(x/self.temperature) / total for x in score_list]
-        probs = [x for x in score_list]
-        return mv_list[np.random.choice([i for i in range(len(mv_list))], p=probs)]
+        probs = np.nan_to_num(np.array([x for x in score_list]))
+        my_sum = sum(probs)
+        if my_sum < 1.0:
+            probs[0] += 1.0 - my_sum
+        elif my_sum > 1.0:
+            for i in range(len(probs)):
+                if probs[i] > my_sum - 1.0:
+                    probs[i] -= my_sum - 1.0
+        if self.softmax_calls == 0:
+            # Put a breakpoint here
+            self.softmax_calls = self.softmax_calls + 1
+        else:
+            self.softmax_calls = (self.softmax_calls + 1) % 150
+        try:
+            action = mv_list[np.random.choice([i for i in range(len(mv_list))], p=probs)]
+        except ValueError:
+            print("VALUE ERROR")
+            print("\a")
+            action = mv_list[0]
+        return action
     
     def max_move(self, state: mergeGame, depth):
         
