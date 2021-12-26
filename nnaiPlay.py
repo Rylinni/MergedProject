@@ -134,10 +134,10 @@ if __name__ == '__main__':
     # test_super(filename='nnai.sav', replace_max_iter=True)
 
     # run_default(n=150, filename='nnai.sav', temperature=3)
-    run_default(n=150, filename='nnai.sav')
+    # run_default(n=150, filename='nnai.sav')
     observe()
 
-    eval_model(model='nnai.sav', look_at=100, games=200)
+    # eval_model(model='nnai.sav', look_at=100, games=200)
 
     """
     scores = []

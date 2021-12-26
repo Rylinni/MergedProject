@@ -125,13 +125,13 @@ class mergeGame:
         for x in range(len(bd)-1)[1:]:
             for y in range(len(bd)-1)[1:]:
                 if bd[x][y] == 0:
-                    if bd[x-1][y]:
+                    if bd[x-1][y] == 0:
                         return True
-                    if bd[x+1][y]:
+                    if bd[x+1][y] == 0:
                         return True
-                    if bd[x][y-1]:
+                    if bd[x][y-1] == 0:
                         return True
-                    if bd[x][y+1]:
+                    if bd[x][y+1] == 0:
                         return True
         return False
 
