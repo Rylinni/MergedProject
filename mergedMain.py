@@ -5,7 +5,7 @@ import copy
 class mergeGame:
     def __init__(self, board = None, move = None, score = 0, unlocks = None, piece = None):
         if board is None:
-            board = [[0 for x in range(5)] for y in range(5)]
+            board = [[0 for _ in range(5)] for _ in range(5)]
         
         if unlocks is None:
             unlocks = [1,2]
@@ -280,8 +280,6 @@ class mergeGame:
                     upgrade = self.evalPiece(val, bigger[1], (smaller[0], smaller[1]))
         self.score += self.multiplier * self.withheldPoints
                     
-
-
 # board = [[1,1,1,0,0],
 #                  [0,0,0,0,0], 
 #                  [0,0,0,0,0], 
