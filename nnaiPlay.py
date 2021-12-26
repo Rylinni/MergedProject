@@ -12,12 +12,12 @@ def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai.sav',
     for match in range(n):
         print(f"Match {match+1}")
         scores = []
-        for games in range(k):
+        for _ in range(k):
             game = mergedMain.mergeGame()
             moves = game.findLegalMoves()
             while len(moves) > 0:
-                gameCopy = copy.deepcopy(game)
-                move = agent.get_action(gameCopy, 1)
+                game_copy = copy.deepcopy(game)
+                move = agent.get_action(game_copy, 1)
                 game.playMove(move)
                 moves = game.findLegalMoves()
             agent.terminate_learn(game)
@@ -48,8 +48,7 @@ def observe(model='nnai.sav', look_at=100):
     tm = os.listdir("training")
     tm.remove('.DS_Store')
     last = nnai.get_last_training()
-    trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-100]
-    # trainmulti=["training/" + x for x in tm]
+    trainmulti=["training/" + x for x in tm if int(x.split("_")[1].split(".")[0])>=last-look_at]
     training = [[], []]
     for fname in trainmulti:
         train = pickle.load(open(fname, 'rb'))
@@ -134,12 +133,11 @@ if __name__ == '__main__':
 
     # test_super(filename='nnai.sav', replace_max_iter=True)
 
-    # run_default(n=100, filename='nnai.sav', temperature=5)
-    run_default(n=100, filename='nnai.sav', temperature=1)
-    run_default(n=200, filename='nnai.sav')
+    # run_default(n=150, filename='nnai.sav', temperature=3)
+    run_default(n=150, filename='nnai.sav')
     observe()
 
-    eval_model(model='nnai.sav', look_at=150)
+    eval_model(model='nnai.sav', look_at=100, games=200)
 
     """
     scores = []

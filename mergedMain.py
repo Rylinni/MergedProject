@@ -1,8 +1,3 @@
-# def drawBoard(board):
-#     for row in board:
-#         for num in row:
-#             print(f" {num}", end='', flush=True)
-#         print()
 import random
 import copy
 
