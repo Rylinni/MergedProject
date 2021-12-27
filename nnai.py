@@ -85,8 +85,9 @@ class NNAI():
             mv_list.append(mv)
             score_list.append(total_score)
         # Normalize, apply softmax
-        total = sum([math.e**(x/self.temperature) for x in score_list])
-        score_list = [math.e**(x/self.temperature) / total for x in score_list]
+        score_list = [math.e**(x/self.temperature) for x in score_list]
+        total = sum(score_list)
+        score_list = [x / total for x in score_list]
         probs = np.nan_to_num(np.array([x for x in score_list]))
         my_sum = sum(probs)
         if my_sum < 1.0:

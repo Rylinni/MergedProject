@@ -129,15 +129,11 @@ def eval_model(model='nnai.sav', look_at=75, games=100):
 
 if __name__ == '__main__':
 
-    # eval_model(model='nnai.sav', games=50, look_at=75)
-
-    # test_super(filename='nnai.sav', replace_max_iter=True)
-
-    run_default(n=150, filename='nnai.sav', temperature=4)
+    # run_default(n=100, filename='nnai.sav', temperature=3)
     run_default(n=200, filename='nnai.sav')
     # observe()
 
-    eval_model(model='nnai.sav', look_at=50, games=200)
+    eval_model(model='nnai.sav', look_at=75, games=200)
 
     """
     scores = []
