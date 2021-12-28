@@ -16,16 +16,15 @@ def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai.sav',
             game = mergedMain.mergeGame()
             moves = game.findLegalMoves()
             while len(moves) > 0:
-                game_copy = copy.deepcopy(game)
-                move = agent.get_action(game_copy, 1)
+                move = agent.get_action(game, 1)
                 game.playMove(move)
                 moves = game.findLegalMoves()
             agent.terminate_learn(game)
             print(f"Score: {game.score}")
             scores.append(game.score)
-        agent.save_fly_training()
-        agent.fit()
-        agent.save_model(filename=outfilename)
+        #agent.save_fly_training()
+        #agent.fit()
+        #agent.save_model(filename=outfilename)
         avg_score = statistics.mean(scores)
         print(f"Avg match score: {avg_score}")
         total_scores.append(avg_score)
@@ -60,8 +59,7 @@ def observe(model='nnai.sav', look_at=100):
     game = mergedMain.mergeGame()
     moves = game.findLegalMoves()
     while len(moves) > 0:
-        game_copy = copy.deepcopy(game)
-        move = agent.get_action(game_copy, 1)
+        move = agent.get_action(game, 1)
         game.playMove(move)
         
         draw_board(game.board)
@@ -116,8 +114,7 @@ def eval_model(model='nnai.sav', look_at=75, games=100):
         game = mergedMain.mergeGame()
         moves = game.findLegalMoves()
         while len(moves) > 0:
-            game_copy = copy.deepcopy(game)
-            move = agent.get_action(game_copy, 1)
+            move = agent.get_action(game, 1)
             game.playMove(move)
             moves = game.findLegalMoves()
         scores.append(game.score)
@@ -130,8 +127,8 @@ def eval_model(model='nnai.sav', look_at=75, games=100):
 if __name__ == '__main__':
 
     # run_default(n=100, filename='nnai.sav', temperature=3)
-    run_default(n=30, filename='nnai.sav')
-    # observe()
+    # run_default(n=30, filename='nnai.sav')
+    observe()
 
     eval_model(model='nnai.sav', look_at=75, games=200)
 
