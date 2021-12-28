@@ -31,7 +31,6 @@ class mergeGame:
             self.unlocks = unlocks
             self.generateNextPiece()
     
-
     def playMove(self, move):
         values, coordinates = move
         if self.checkMoveViable(move):
@@ -43,7 +42,8 @@ class mergeGame:
             raise Exception("Invalid Move for current board")
 
     def generateSuccessorBoard(self, move):
-        board = [[j for j in i] for i in self.board]
+        # board = [[j for j in i] for i in self.board]
+        board = copy.deepcopy(self.board)
         ghost = mergeGame(board=board, score=self.score, unlocks=self.unlocks)
         ghost.playMove(move)
         return ghost

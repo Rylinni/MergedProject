@@ -4,6 +4,7 @@ import copy
 import statistics
 import os
 import pickle
+import time
 
 # Generate test data, fit, repeat
 def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai.sav', outfilename='nnai.sav'):
@@ -22,9 +23,9 @@ def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai.sav',
             agent.terminate_learn(game)
             print(f"Score: {game.score}")
             scores.append(game.score)
-        #agent.save_fly_training()
-        #agent.fit()
-        #agent.save_model(filename=outfilename)
+        agent.save_fly_training()
+        agent.fit()
+        agent.save_model(filename=outfilename)
         avg_score = statistics.mean(scores)
         print(f"Avg match score: {avg_score}")
         total_scores.append(avg_score)
@@ -127,8 +128,8 @@ def eval_model(model='nnai.sav', look_at=75, games=100):
 if __name__ == '__main__':
 
     # run_default(n=100, filename='nnai.sav', temperature=3)
-    # run_default(n=30, filename='nnai.sav')
-    observe()
+    # run_default(n=2, filename='nnai.sav')
+    # observe()
 
     eval_model(model='nnai.sav', look_at=75, games=200)
 

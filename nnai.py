@@ -10,12 +10,13 @@ import random
 
 # Get state representation for NN
 def get_rep(state):
-    board_rep = []
+    # Note: this code was revised to be more optimized
+    board_rep = [0] * 8 * 5 * 5
+    i = 0
     for row in state.board:
         for col in row:
-            square = [0 for _ in range(8)]
-            square[col] = 1
-            board_rep.extend(square)
+            board_rep[i+col] = 1
+            i += 8
     return board_rep
 
 def get_last_training():
