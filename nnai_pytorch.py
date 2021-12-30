@@ -9,6 +9,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.utils.data as Data
+import torchvision.models as models
 import pickle
 
 # Get state representation for NN
@@ -40,9 +41,21 @@ class NeuralNetwork(torch.nn.Module):
         self.linear_relu_stack = torch.nn.Sequential(
             torch.nn.Linear(5*5*8, 200),
             torch.nn.ReLU(),
-            torch.nn.Linear(200, 100),
+            torch.nn.Linear(200, 200),
             torch.nn.ReLU(),
-            torch.nn.Linear(100, 1),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 1),
         )
 
     def forward(self, x):
@@ -173,6 +186,7 @@ class NNAIPyTorch():
     def inference(self, state: mergeGame):
         if self.model is None:
             return 0
+        self.model.eval()
         res = self.model(torch.tensor(get_rep(state)).float())[0].item()
         return res
 
@@ -180,6 +194,8 @@ class NNAIPyTorch():
         model.train()
         for batch, (X, y) in enumerate(dataloader):
             X, y = X.to(self.device), y.to(self.device)
+            X = Variable(X)
+            y = Variable(y)
 
             # Compute prediction error
             pred = model(X)
@@ -190,7 +206,7 @@ class NNAIPyTorch():
             loss.backward()
             optimizer.step()
 
-    def fit(self, trainfilename=None, trainmulti=None, partial=True, layer_sizes=None, epochs=100, batch_size=32):
+    def fit(self, trainfilename=None, trainmulti=None, layer_sizes=None, epochs=1, batch_size=None, adam_lr=.01, weight_decay=0, amsgrad=False):
         # Organizing training data
         if trainmulti is not None:
             training = [[], []]
@@ -220,31 +236,26 @@ class NNAIPyTorch():
         
         """
         # TODO Don't hardcode optimizer and loss function
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=0.01)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=adam_lr, weight_decay=weight_decay, amsgrad=amsgrad)
         loss_func = torch.nn.MSELoss()
-        if partial:
-            x = torch.tensor(training[0]).float()
-            y = torch.reshape(torch.tensor(training[1]), (-1,1)).float()
-            x, y = Variable(x), Variable(y)
-            torch_dataset = Data.TensorDataset(x, y)
-            # Note: shuffle is false because in this case we want most recent trained last
-            torch_dataloader = Data.DataLoader(torch_dataset, batch_size=batch_size, shuffle=False)
+
+        x = torch.tensor(training[0]).float()
+        y = torch.reshape(torch.tensor(training[1]), (-1,1)).float()
+        x, y = Variable(x), Variable(y)
+        torch_dataset = Data.TensorDataset(x, y)
+        if batch_size is None:
+            batch_size = min(200, len(torch_dataset))
+        torch_dataloader = Data.DataLoader(torch_dataset, batch_size=batch_size, shuffle=False)
+        for e in range(1, 1+epochs):
             self.train(torch_dataloader, self.model, loss_func, optimizer)
-        else:
-            x = torch.tensor(training[0]).float()
-            y = torch.reshape(torch.tensor(training[1]), (-1,1)).float()
-            x, y = Variable(x), Variable(y)
-            torch_dataset = Data.TensorDataset(x, y)
-            torch_dataloader = Data.DataLoader(torch_dataset, batch_size=batch_size, shuffle=True)
-            for e in range(1, 1+epochs):
-                self.train(torch_dataloader, self.model, loss_func, optimizer)
-                if self.speak:
-                    print(f"Epoch {e}/{epochs}")
+            if self.speak:
+                print(f"Epoch {e}/{epochs}")
             
     def load_model(self, filename='nnai_torch.sav'):
-        self.model = pickle.load(open(filename, 'rb'))
+        self.model = torch.load(filename)
 
     def save_model(self, filename='nnai_torch.sav'):
-        pickle.dump(self.model, open(filename, 'wb'))
+        # pickle.dump(self.model, open(filename, 'wb'))
+        torch.save(self.model, filename)
 
     

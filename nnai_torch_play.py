@@ -8,7 +8,8 @@ import pickle
 import time
 import torch
 
-def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai_torch.sav', outfilename='nnai_torch.sav'):
+def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai_torch.sav', outfilename='nnai_torch.sav',
+                    epochs=1, adam_lr=.01, weight_decay=0, amsgrad=False):
     agent = NNAIPyTorch(filename=filename, epsilon=epsilon, temperature=temperature)
     total_scores = []
     for match in range(n):
@@ -25,7 +26,7 @@ def run_default(n=10, k=10, epsilon=None, temperature=None, filename='nnai_torch
             print(f"Score: {game.score}")
             scores.append(game.score)
         agent.save_fly_training()
-        agent.fit()
+        agent.fit(epochs=epochs, adam_lr=adam_lr, weight_decay=weight_decay, amsgrad=amsgrad)
         agent.save_model(filename=outfilename)
         avg_score = statistics.mean(scores)
         print(f"Avg match score: {avg_score}")
@@ -77,5 +78,7 @@ def eval_model(model='nnai_torch.sav', look_at=75, games=100):
 
 if __name__ == '__main__':
 
-    run_default(n=200)
-    eval_model()
+    # Last was 202
+    eval_model(games=200)
+    run_default(n=100, adam_lr=.001, weight_decay=.01)
+    eval_model(games=200)
