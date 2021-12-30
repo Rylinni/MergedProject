@@ -76,9 +76,37 @@ def eval_model(model='nnai_torch.sav', look_at=75, games=100):
     print(f"Average performance: {avg}")
     print(f"High score: {my_max}")
 
+def draw_board(board):
+    for row in board:
+        for num in row:
+            print(f" {num}", end='', flush=True)
+        print()
+
+def observe(model='nnai_torch.sav', look_at=100):
+    agent = NNAIPyTorch(filename=model)
+    
+    game = mergedMain.mergeGame()
+    moves = game.findLegalMoves()
+    while len(moves) > 0:
+        move = agent.get_action(game, 1)
+        game.playMove(move)
+        
+        draw_board(game.board)
+        print("Piece: " + str(game.nextPiece))
+        print("Score: " + str(game.score))
+        print("Last move: " + str(move))
+        print("Inference: " + str(agent.inference(game)))
+        userin = input()
+        if userin == 'q':
+            return 0
+        
+        moves = game.findLegalMoves()
+    print(f"Score: {game.score}")
+
 if __name__ == '__main__':
 
-    # Last was 202
-    eval_model(games=200)
-    run_default(n=100, adam_lr=.001, weight_decay=.01)
+    # Last: avg 184 --> 185 --> 223 --> 198 --> 215 --> 224 --> 228 --> 247 --> 244
+    #       --> 262 --> 266 --> 247 --> 278 --> 258 --> 265 --> 274 --> 276 --> 248
+    #       --> 250
+    run_default(n=300, adam_lr=.0001)
     eval_model(games=200)

@@ -39,23 +39,11 @@ class NeuralNetwork(torch.nn.Module):
     def __init__(self):
         super(NeuralNetwork, self).__init__()
         self.linear_relu_stack = torch.nn.Sequential(
-            torch.nn.Linear(5*5*8, 200),
+            torch.nn.Linear(5*5*8, 750),
             torch.nn.ReLU(),
-            torch.nn.Linear(200, 200),
+            torch.nn.Linear(750, 750),
             torch.nn.ReLU(),
-            torch.nn.Linear(200, 200),
-            torch.nn.ReLU(),
-            torch.nn.Linear(200, 200),
-            torch.nn.ReLU(),
-            torch.nn.Linear(200, 200),
-            torch.nn.ReLU(),
-            torch.nn.Linear(200, 200),
-            torch.nn.ReLU(),
-            torch.nn.Linear(200, 200),
-            torch.nn.ReLU(),
-            torch.nn.Linear(200, 200),
-            torch.nn.ReLU(),
-            torch.nn.Linear(200, 1),
+            torch.nn.Linear(750, 1),
         )
 
     def forward(self, x):
@@ -194,8 +182,6 @@ class NNAIPyTorch():
         model.train()
         for batch, (X, y) in enumerate(dataloader):
             X, y = X.to(self.device), y.to(self.device)
-            X = Variable(X)
-            y = Variable(y)
 
             # Compute prediction error
             pred = model(X)
