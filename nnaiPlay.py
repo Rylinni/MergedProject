@@ -128,7 +128,7 @@ def eval_model(model='nnai.sav', look_at=75, games=100):
 if __name__ == '__main__':
 
     # run_default(n=100, filename='nnai.sav', temperature=3)
-    run_default(n=100, filename='nnai.sav')
+    # run_default(n=100, filename='nnai.sav')
     # Note: Last was 423
     # Then 491
     # observe()

@@ -39,11 +39,21 @@ class NeuralNetwork(torch.nn.Module):
     def __init__(self):
         super(NeuralNetwork, self).__init__()
         self.linear_relu_stack = torch.nn.Sequential(
-            torch.nn.Linear(5*5*8, 750),
+            torch.nn.Linear(5*5*8, 200),
             torch.nn.ReLU(),
-            torch.nn.Linear(750, 750),
+            torch.nn.Linear(200, 200),
             torch.nn.ReLU(),
-            torch.nn.Linear(750, 1),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 200),
+            torch.nn.ReLU(),
+            torch.nn.Linear(200, 1),
         )
 
     def forward(self, x):
@@ -81,7 +91,7 @@ class NNAIPyTorch():
         if speak:
             print(f"Using {self.device} device")
 
-    def get_action(self, game_state: mergeGame, depth):
+    def get_action(self, game_state: mergeGame):
 
         # If epsilon is non-zero, sometimes randomly picks a move
         if self.epsilon is not None and self.epsilon != 0 and random.random() < self.epsilon:
@@ -90,14 +100,14 @@ class NNAIPyTorch():
             self.add_state(game_state)
         # Temperature induces use of softmax
         elif self.temperature is None:
-            action = self.max_move(game_state, depth)
+            action = self.max_move(game_state)
             self.add_state(game_state)
         else:
-            action = self.softmax_move(game_state, depth)
+            action = self.softmax_move(game_state)
             self.add_state(game_state)
         return action
 
-    def softmax_move(self, state: mergeGame, depth):
+    def softmax_move(self, state: mergeGame):
         
         moves = state.findLegalMoves()
 
@@ -136,7 +146,7 @@ class NNAIPyTorch():
             action = mv_list[0]
         return action
     
-    def max_move(self, state: mergeGame, depth):
+    def max_move(self, state: mergeGame):
         
         moves = state.findLegalMoves()
 
@@ -144,13 +154,20 @@ class NNAIPyTorch():
             return None
         max_action = None
         max_score = -math.inf
-        for mv in moves:
-            next_state = state.generateSuccessorBoard(mv)
-            nnscore = self.inference(next_state)
-            total_score = nnscore + next_state.score
+        next_states = [state.generateSuccessorBoard(mv) for mv in moves]
+        next_state_reps = [get_rep(state) for state in next_states]
+        self.model.eval()
+        if self.model is None:
+            nnscores = [0 for _ in range(len(next_states))]
+        else:
+            nnscores = [x.item() for x in self.model(torch.tensor(next_state_reps).float())]
+        
+        for i in range(len(next_states)):
+            total_score = nnscores[i] + next_states[i].score
             if total_score > max_score:
-                max_action = mv
+                max_action = moves[i]
                 max_score = total_score
+
         return max_action
 
     def add_state(self, state):

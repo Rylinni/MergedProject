@@ -92,3 +92,5 @@ test_x = actual_data[0][0]
 print(test_x)
 res = model(torch.tensor(test_x).float())[0].item()
 print(res)
+res = model(torch.tensor(actual_data[0]).float())[0]
+print(res)
