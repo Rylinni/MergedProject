@@ -9,6 +9,8 @@ class mergeGame:
         
         if unlocks is None:
             unlocks = [1,2]
+        else:
+            unlocks = list(unlocks)
 
         if board and move:
             self.board = board
@@ -195,8 +197,9 @@ class mergeGame:
         self.multiplier *= self.merges
         if self.board[x][y] == 8:
             self.explode(x, y)
-        elif not self.board[x][y] in self.unlocks:
-            self.unlocks.append(self.board[x][y])
+        elif not (self.board[x][y] in self.unlocks):
+            to_unlock = self.board[x][y]
+            self.unlocks.append(to_unlock)
             self.allPossibleNextPieces()
 
 
