@@ -167,7 +167,5 @@ def observe(model='nnai_torch.sav', look_at=100):
     print(f"Score: {game.score}")
 
 if __name__ == '__main__':
-    while True:
-        observe()
-    # run_default(n=300, k=20, adam_lr=.000005)
-    eval_model(games=500)
+    run_default(n=300, k=20, adam_lr=.000005)
+    # eval_model(games=500)

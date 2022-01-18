@@ -85,7 +85,7 @@ class NNAIPyTorch():
 
         # Purely for debugging
         self.softmax_calls = 0
-
+        
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.speak = speak
         if speak:
@@ -189,6 +189,7 @@ class NNAIPyTorch():
         self.fly_training = [[], []]
     
     def inference(self, state: mergeGame):
+
         if self.model is None:
             return 0
         self.model.eval()
@@ -242,8 +243,8 @@ class NNAIPyTorch():
         optimizer = torch.optim.Adam(self.model.parameters(), lr=adam_lr, weight_decay=weight_decay, amsgrad=amsgrad)
         loss_func = torch.nn.MSELoss()
 
-        x = torch.tensor(training[0]).float()
-        y = torch.reshape(torch.tensor(training[1]), (-1,1)).float()
+        x = torch.tensor(training[0]).float().to(self.device)
+        y = torch.reshape(torch.tensor(training[1]), (-1,1)).float().to(self.device)
         x, y = Variable(x), Variable(y)
         torch_dataset = Data.TensorDataset(x, y)
         if batch_size is None:
