@@ -1,0 +1,413 @@
+<title>Onion &amp; Furnace Playbook</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: a field guide. One reading column (~70ch) for rules; boards, charts and example cards break wider. The big-merge plan sits in its own tinted band. */
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --sunk: #ecebe5;
+  --line: #dcdad2;
+  --fg: #1d1f27;
+  --muted: #5d6173;
+  --accent: #c26a00;       /* section marks, emphasis */
+  --band: #fff4e3;         /* big-merge band */
+  --band-line: #f0d3a8;
+  --cell: #e3e1da;
+  --t1: #5b7cfa; --t2: #1fb5a5; --t3: #8cc63f; --t4: #f0b429; --t5: #f2734b; --t6: #d6489a;
+  --tm: #ffffff; --tm-ink: #11131a; --tm-ring: #1d1f27;
+  --z-rim: #d9d6cc; --z-ring: #c4d3ee; --z-plus: #f6c27a; --z-hub: #e8893b;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12141a; --surface: #1a1d26; --sunk: #222634; --line: #2e3344; --fg: #eceef4; --muted: #9aa0b4;
+    --accent: #ffb547; --band: #221d14; --band-line: #4a3a1e; --cell: #262b3a;
+    --tm: #f7f7fb; --tm-ink: #11131a; --tm-ring: #f7f7fb;
+    --z-rim: #2b3040; --z-ring: #2b3d63; --z-plus: #8a5a1c; --z-hub: #c66a1c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12141a; --surface: #1a1d26; --sunk: #222634; --line: #2e3344; --fg: #eceef4; --muted: #9aa0b4;
+  --accent: #ffb547; --band: #221d14; --band-line: #4a3a1e; --cell: #262b3a;
+  --tm: #f7f7fb; --tm-ink: #11131a; --tm-ring: #f7f7fb;
+  --z-rim: #2b3040; --z-ring: #2b3d63; --z-plus: #8a5a1c; --z-hub: #c66a1c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.6; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; }
+.page { max-width: 1000px; margin: 0 auto; display: grid; gap: 44px; }
+.prose { max-width: 70ch; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: clamp(34px, 6vw, 54px); font-weight: 800; letter-spacing: -0.015em; }
+h2 { font-size: clamp(24px, 3.6vw, 32px); font-weight: 800; }
+h3 { font-size: 19px; font-weight: 800; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.lede { font-size: 18px; color: var(--muted); margin-top: 12px; max-width: 62ch; }
+section { display: grid; gap: 18px; }
+.muted { color: var(--muted); }
+.num { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+code, .mono { font-family: var(--f-data); font-size: 0.92em; }
+
+/* Stat strip */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 22px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.stat b { display: block; font-family: var(--f-display); font-size: 30px; font-weight: 800; line-height: 1.1; }
+.stat span { font-size: 14px; color: var(--muted); }
+
+/* Boards */
+.board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 4px;
+  background: var(--sunk); padding: 6px; border-radius: 10px; aspect-ratio: 1; width: 100%; max-width: 100%; }
+.c { position: relative; line-height: 1; border-radius: 6px; background: var(--cell); display: grid; place-items: center; min-width: 0; min-height: 0;
+  font-family: var(--f-display); font-weight: 800; color: #fff; font-size: clamp(13px, 2.4vw, 20px); }
+.c[data-v="1"] { background: var(--t1); } .c[data-v="2"] { background: var(--t2); }
+.c[data-v="3"] { background: var(--t3); color: #13200a; } .c[data-v="4"] { background: var(--t4); color: #2a1d02; }
+.c[data-v="5"] { background: var(--t5); } .c[data-v="6"] { background: var(--t6); }
+.c[data-v="7"] { background: var(--tm); color: var(--tm-ink); box-shadow: inset 0 0 0 2px var(--tm-ring); }
+.c.placed::after { content: ""; position: absolute; inset: -3px; border-radius: 8px; border: 2.5px solid var(--accent); }
+.c.slot { background: transparent; border: 2px dashed var(--accent); color: var(--accent); font-family: var(--f-data); font-size: 15px; }
+
+/* Zone map */
+.map-wrap { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 680px) { .map-wrap { grid-template-columns: minmax(0, 1fr); } .map-wrap .board { max-width: 300px; } }
+.zone { font-family: var(--f-data); font-size: 11px; font-weight: 600; color: var(--fg); }
+.zone.rim { background: var(--z-rim); } .zone.ring { background: var(--z-ring); } .zone.plus { background: var(--z-plus); } .zone.hub { background: var(--z-hub); color: #fff; }
+.zone.corner { background: var(--z-rim); box-shadow: inset 0 0 0 2px var(--muted); }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 14px; min-width: 100%; }
+th, td { text-align: left; padding: 7px 12px 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.r, th.r { text-align: right; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+
+/* Vocabulary */
+.vocab { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 4px 28px; margin: 0; }
+.vocab div { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.vocab dt { font-family: var(--f-display); font-weight: 800; font-size: 17px; }
+.vocab dd { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+
+/* Heuristics */
+.rules { display: grid; gap: 14px; counter-reset: rule; }
+.rule { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; gap: 8px; }
+.rule header { display: flex; gap: 12px; align-items: baseline; }
+.rule .rank { font-family: var(--f-data); font-weight: 600; color: var(--accent); font-size: 14px; flex: none; }
+.rule .do { font-size: 17px; font-weight: 600; }
+.rule .why { color: var(--fg); }
+.rule .ev { color: var(--muted); font-size: 14px; }
+.rule .ev b { color: var(--fg); font-weight: 600; font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+.weak { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; margin-left: auto; flex: none; }
+
+/* Bar charts */
+.bars { display: grid; gap: 6px; max-width: 560px; }
+.bar { display: grid; grid-template-columns: 9.5ch minmax(0, 1fr) 6ch; gap: 10px; align-items: center; font-size: 13px; }
+.bar .lbl { color: var(--muted); font-family: var(--f-data); }
+.bar .track { height: 14px; background: var(--sunk); border-radius: 4px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--accent); border-radius: 4px; }
+.bar .val { font-family: var(--f-data); font-variant-numeric: tabular-nums; text-align: right; }
+
+/* Big-merge band */
+.band { background: var(--band); border: 1px solid var(--band-line); border-radius: 18px; padding: 28px clamp(16px, 4vw, 36px); display: grid; gap: 26px; }
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--f-data); font-size: 14px; }
+.chain .c { width: 34px; height: 34px; font-size: 16px; }
+.chain .arrow { color: var(--muted); }
+.chain .x { color: var(--accent); font-weight: 600; margin-right: 6px; }
+.chain .sep { width: 1px; height: 28px; background: var(--band-line); margin: 0 6px; }
+.split { display: grid; grid-template-columns: minmax(0, 290px) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 720px) { .split { grid-template-columns: minmax(0, 1fr); } .split .board { max-width: 320px; } }
+ol.steps { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+ol.steps li::marker { font-family: var(--f-data); color: var(--accent); font-weight: 600; }
+.callout { border-left: 4px solid var(--accent); padding: 10px 16px; background: var(--surface); border-radius: 0 10px 10px 0; }
+.callout b { font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+
+/* Examples */
+.examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.ex { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.ex .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.ex .tag { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.ex .pts { font-family: var(--f-display); font-weight: 800; font-size: 22px; }
+.ex .pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
+.ex .pair .arrow { color: var(--muted); font-size: 18px; }
+.ex .board { gap: 3px; padding: 4px; border-radius: 8px; }
+.ex .board .c { font-size: 12px; border-radius: 4px; }
+.ex .board .c.placed::after { inset: -2px; border-width: 2px; border-radius: 5px; }
+.ex .cap { font-size: 12px; color: var(--muted); text-align: center; margin-top: 3px; }
+.ex .piece { display: flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); }
+.ex .piece .c { width: 24px; height: 24px; font-size: 13px; }
+.ex .src { font-size: 12px; color: var(--muted); font-family: var(--f-data); }
+.ex p { font-size: 14px; }
+.phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.phase { border-top: 3px solid var(--line); padding-top: 12px; display: grid; gap: 6px; align-content: start; }
+.phase.late { border-top-color: var(--accent); }
+.phase .when { font-family: var(--f-data); font-size: 12px; color: var(--muted); }
+ul.caveats { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; color: var(--muted); font-size: 15px; }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<main class="page">
+  <header>
+    <div class="eyebrow">Field guide · learned from 3,800 AI games</div>
+    <h1>Onion &amp; Furnace Playbook</h1>
+    <p class="lede">How the trained agents play the 5×5 merge game, written as rules you can follow at the table. Part 1 is for the highest total score. Part 2 is a separate plan for the single biggest merge.</p>
+    <div class="stats">
+      <div class="stat"><b class="num">8×</b><span>longer survival than a greedy player (2,021 vs 256 moves per game)</span></div>
+      <div class="stat"><b class="num">1.35×</b><span>more points per move. Survival, not scoring, is where the AI wins.</span></div>
+      <div class="stat"><b class="num">14.5</b><span>empty cells kept on average after each move</span></div>
+      <div class="stat"><b class="num">×720</b><span>the biggest possible chain: 6 steps, only reachable with a domino</span></div>
+    </div>
+  </header>
+
+  <section aria-labelledby="map-h">
+    <div class="eyebrow">The board</div>
+    <h2 id="map-h">The onion: low tiles outside, Ms in the middle</h2>
+    <div class="map-wrap">
+      <div>
+        <div class="board" id="zonemap" aria-label="Board zones"></div>
+      </div>
+      <div style="display:grid; gap:14px; min-width:0">
+        <p class="prose">Merges land on the cell where you place. Dropping low tiles on the outside walks each merged result inward, which leaves the middle for 6s, Ms and the explosions that clear them. Where the AI keeps each value, compared with an even spread:</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Value</th><th class="r">Corners</th><th class="r">Ring</th><th class="r">Hub</th><th>Reads as</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td class="r num">2.9×</td><td class="r num">0.13×</td><td class="r muted">–</td><td class="muted">dumped in corners</td></tr>
+              <tr><td>4</td><td class="r num">1.46×</td><td class="r num">0.68×</td><td class="r muted">–</td><td class="muted">still mostly outside</td></tr>
+              <tr><td>6</td><td class="r num">0.06×</td><td class="r num">2.1×</td><td class="r muted">–</td><td class="muted">ring diagonals</td></tr>
+              <tr><td>M</td><td class="r muted">–</td><td class="r muted">–</td><td class="r num">10.9×</td><td class="muted">the furnace</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted" style="font-size:14px"><span class="swatch" style="background:var(--z-rim)"></span>Rim (16 border cells, corners outlined) · <span class="swatch" style="background:var(--z-ring)"></span>Ring diagonals · <span class="swatch" style="background:var(--z-plus)"></span>Plus cells · <span class="swatch" style="background:var(--z-hub)"></span>Hub. Plus cells and diagonals together make the 8-cell ring around the hub.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="vocab-h">
+    <div class="eyebrow">Vocabulary</div>
+    <h2 id="vocab-h">Names for the patterns</h2>
+    <dl class="vocab">
+      <div><dt>Onion</dt><dd>Values rising from the outside in: 1–3 on the rim (1s in corners), 4–5 on rim and ring, 6s on the ring diagonals, Ms on the hub and plus cells.</dd></div>
+      <div><dt>Furnace</dt><dd>The hub and its four plus cells, where Ms are parked as a pair waiting for the third M.</dd></div>
+      <div><dt>Loaded pair</dt><dd>Two touching equal tiles with at least one empty neighbour, so one matching tile merges them.</dd></div>
+      <div><dt>Dead pair</dt><dd>A pair with no empty neighbour. It cannot be merged until something nearby clears.</dd></div>
+      <div><dt>Buried tile</dt><dd>A tile with no empty neighbour at all.</dd></div>
+      <div><dt>Ladder (height k)</dt><dd>An empty cell where one tile would chain k times, e.g. a 2 pair and a 3 pair both touching it is a height-2 ladder.</dd></div>
+      <div><dt>Hand-off</dt><dd>A domino chain in which the small half climbs to the big half's value, then the big half merges through it and the chain continues from the big half's cell.</dd></div>
+      <div><dt>Socket: S and F</dt><dd>Two empty touching cells waiting for a domino. S (starter) takes the small half; F (fire cell) takes the big half and is where the explosion happens.</dd></div>
+      <div><dt>Rung</dt><dd>One step of a ladder: a pair (or single) of the right value touching S or F.</dd></div>
+      <div><dt>Out</dt><dd>A piece that would fire a setup at full height.</dd></div>
+      <div><dt>Cash-out</dt><dd>Firing part of a ladder early (a 1–3 step merge) to win back space. It gives up the big setup.</dd></div>
+      <div><dt>Debris</dt><dd>Tiles destroyed by an explosion that were not in any merging group. In a 6-step chain each debris point is worth ×720.</dd></div>
+      <div><dt>Dump</dt><dd>Corners and edge cells where new 1s and 2s go.</dd></div>
+    </dl>
+  </section>
+
+  <section aria-labelledby="p1-h">
+    <div class="eyebrow">Part 1 · Playing for the highest score</div>
+    <h2 id="p1-h">Eight rules, most important first</h2>
+    <p class="prose muted">From 300 games by the score model, 300 by a greedy player (takes the best immediate merge, likes empty cells) and the 179,706-point record game, all replayed move by move.</p>
+    <div class="rules">
+      <article class="rule">
+        <header><span class="rank">1</span><h3>Space comes first</h3></header>
+        <p class="do">Keep about 14 cells empty. Below 10, take every merge you are offered.</p>
+        <p class="why">Games end fast once space starts to go: over the final 20 moves the board loses about one empty cell per move. The AI keeps a cushion and turns down merges only when it can afford to.</p>
+        <div class="bars" id="declineBars" aria-label="Share of available merges the AI declines, by empty cells before the move"></div>
+        <p class="ev">Every game hit 5 or fewer empty cells at some point. After that the AI lasted a median <b>953</b> more moves; the greedy player lasted <b>19</b>. With 4 or fewer empty cells it declined 6 merges in 3,113 moves.</p>
+      </article>
+      <article class="rule">
+        <header><span class="rank">2</span><h3>Run a furnace in the centre</h3></header>
+        <p class="do">Park Ms as a pair on the hub and a plus cell. Fire every third M as soon as it arrives.</p>
+        <p class="why">After M unlocks, one piece value in seven is an M, and an M only leaves the board by exploding. A centre blast clears the full 3×3; on the rim it clears as few as 4 cells.</p>
+        <p class="ev">The AI keeps <b>44%</b> of its Ms on the hub and <b>3.7%</b> on the rim (greedy: <b>56%</b> on the rim). When an explosion was possible it fired <b>99%</b> of the time. <b>94%</b> of explosions happened on the hub or ring, clearing 3.5 tiles besides the Ms.</p>
+      </article>
+      <article class="rule">
+        <header><span class="rank">3</span><h3>Build the onion</h3></header>
+        <p class="do">Put new 1s and 2s in corners and on edges. Keep the middle for high tiles.</p>
+        <p class="why">Merged results land where you place, so placing low and outside pushes growth inward toward the furnace, where it can be blasted.</p>
+        <p class="ev">Low tiles that don't merge go to a corner <b>33%</b>, an edge <b>61%</b>, the ring <b>6%</b>. The greedy player's layout is flat, with <b>37%</b> of its low tiles landing in the middle.</p>
+      </article>
+      <article class="rule">
+        <header><span class="rank">4</span><h3>When there's room, make a pair instead of a small merge</h3></header>
+        <p class="do">With plenty of space, pass on merges worth a dozen points and place the tile to make a loaded pair.</p>
+        <p class="why">A pair is stored value: later it can be one rung of a chain worth ×2 to ×24.</p>
+        <p class="ev">The AI declined <b>18.9%</b> of available merges (greedy <b>1.5%</b>); <b>67.5%</b> of those declines made a new pair. The median merge it gave up was worth <b>12</b> points. It almost never declines an explosion (<b>0.7%</b>).</p>
+      </article>
+      <article class="rule">
+        <header><span class="rank">5</span><h3>Keep every pair loaded</h3></header>
+        <p class="do">Don't seal a pair in with unrelated tiles. Every tile should have a way to be reached.</p>
+        <p class="ev"><b>98%</b> of the AI's pairs have an empty neighbour (greedy <b>86%</b>). It averages <b>1.1</b> buried tiles per board; greedy averages <b>2.3</b>.</p>
+      </article>
+      <article class="rule">
+        <header><span class="rank">6</span><h3>Stack pairs into ladders</h3></header>
+        <p class="do">Place pairs of consecutive values (2-2 beside 3-3, 3-3 beside 4-4) so both touch one empty cell.</p>
+        <p class="ev"><b>37%</b> of the AI's boards hold a ladder of height 2 or more (greedy <b>18.5%</b>). Its 4-step chains are <b>4×</b> as common as greedy's (0.73% vs 0.19% of moves).</p>
+      </article>
+      <article class="rule">
+        <header><span class="rank">7</span><h3>Dominoes: feed two groups, or hand off</h3><span class="weak">weak evidence</span></header>
+        <p class="do">Look for a placement where each half completes its own pair, or where the small half climbs into the big one.</p>
+        <p class="ev">About half of dominoes merge. Of those, <b>8.1%</b> hand off and <b>7.3%</b> merge both halves separately, but greedy hands off almost as often (<b>5.9%</b>), so this may not be a learned skill.</p>
+      </article>
+      <article class="rule">
+        <header><span class="rank">8</span><h3>Down to about 4 empty cells: cash out and bomb</h3></header>
+        <p class="do">Take every merge, and use an M explosion to clear the most crowded part of the board.</p>
+        <p class="ev">With 4 or fewer empty cells the AI merges on <b>49%</b> of moves. Boards at game over had about <b>7</b> different values and <b>19</b> separate groups: the end comes from too many values competing for space, not from one unlucky piece.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="p2-h">
+    <div style="display:grid; gap:10px">
+      <div class="eyebrow">Part 2 · Playing for the largest single merge</div>
+      <h2 id="p2-h">One huge move: the ×720 socket</h2>
+      <p class="prose">This is a different game. The big-merge model averages about 5,700 points per game instead of 25,000, and it holds dangerous boards on purpose. What it buys is the 6-step chain, the longest chain the rules allow.</p>
+    </div>
+
+    <div style="display:grid; gap:10px">
+      <h3>The target shape</h3>
+      <p class="prose">Each step of a chain needs a fresh group touching the cell that's merging, and a cell has only 4 neighbours. A single piece therefore stops at 4 steps. A domino gets 6, because the chain hands off from S to F and F brings 3 new neighbours. All 90 six-step chains the AI played were one of two dominoes, and every one ended in an explosion next to the hub:</p>
+      <div class="chain" aria-label="2 plus 4 domino chain">
+        <span class="x">2+4 (74 of 90)</span>
+        <span class="c" data-v="2">2</span><span class="arrow">→</span><span class="c" data-v="3">3</span><span class="arrow">→</span><span class="c" data-v="4">4</span>
+        <span class="sep" aria-hidden="true"></span><span class="mono muted">hand-off to F</span><span class="sep" aria-hidden="true"></span>
+        <span class="c" data-v="5">5</span><span class="arrow">→</span><span class="c" data-v="6">6</span><span class="arrow">→</span><span class="c" data-v="7">M</span><span class="arrow">→</span><span class="mono" style="color:var(--accent);font-weight:600">boom</span>
+      </div>
+      <div class="chain" aria-label="2 plus 5 domino chain">
+        <span class="x">2+5 (16 of 90)</span>
+        <span class="c" data-v="2">2</span><span class="arrow">→</span><span class="c" data-v="3">3</span><span class="arrow">→</span><span class="c" data-v="4">4</span><span class="arrow">→</span><span class="c" data-v="5">5</span>
+        <span class="sep" aria-hidden="true"></span><span class="mono muted">hand-off to F</span><span class="sep" aria-hidden="true"></span>
+        <span class="c" data-v="6">6</span><span class="arrow">→</span><span class="c" data-v="7">M</span><span class="arrow">→</span><span class="mono" style="color:var(--accent);font-weight:600">boom</span>
+      </div>
+      <p class="prose muted" style="font-size:15px">Points = (sum of every tile merged or blown up) × 720. Groups of exactly three give 3 × (2+3+4+5+6+7) = 81, so <span class="num">58,320</span> is the standard result. Extra tiles in a group or in the blast raise it: the AI's best was <span class="num">65,520</span> (91 × 720). The best board our search found scores <span class="num">70,560</span> (98 × 720). A domino that contains an M can't do this: its other half reaches M in at most 3 steps, so the chain caps at ×24.</p>
+    </div>
+
+    <div class="split">
+      <div>
+        <div class="board" id="socketBoard" aria-label="Example socket, one move before a 58,320 point chain"></div>
+        <p class="muted" style="font-size:13px; margin-top:8px">A real socket one move before it fired for 58,320 (example E below). S and F are the dashed cells; the waiting piece is a 2+4 domino.</p>
+      </div>
+      <div style="display:grid; gap:12px; min-width:0">
+        <h3>Building the socket (2+4 version)</h3>
+        <ol class="steps">
+          <li><b>Pick F on a plus cell</b>, next to the hub. All 90 six-step explosions fired from a plus cell. Your M pair (the furnace) should already touch it.</li>
+          <li><b>Around F</b>, on its three other neighbours: the M pair, a 6 pair and a 5 pair. Only one tile of each pair has to touch F; the partner can lie further out.</li>
+          <li><b>Pick S</b> as F's neighbour on the rim side. Around S: a 2 pair, a 3 pair, and one single 4 touching S or F. That lone 4 joins the domino's 4 and the climbing 4 at the hand-off. For 2+5 instead: pairs of 2, 3 and 4 around S, and a single 5 touching F.</li>
+          <li><b>Keep S and F empty</b>, and leave no other cell where a stray 2 or 3 would set off part of the ladder.</li>
+          <li><b>Wait for the out.</b> A particular domino comes about 2.4% of the time (roughly one in 40 pieces). A 3+4 also fires a 2+4 socket, at 5 steps, for about 9,000–10,000.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div style="display:grid; gap:10px">
+        <h3>Build low rungs first, the M pair last</h3>
+        <p class="muted" style="font-size:15px">How long each rung had been in place when the 6-step fired (median moves, 91 chains). The 3 and 2 pairs on the rim go in first; the M pair is completed last most often (28 of 91).</p>
+        <div class="bars" id="rungBars" aria-label="Median moves each rung stood before firing"></div>
+        <p class="muted" style="font-size:15px">Protect the M pair: with a 6-step ready, the big-merge model refused to explode a new M 71 times out of 78, parking it elsewhere. The score model explodes 99% of the time.</p>
+      </div>
+      <div style="display:grid; gap:12px">
+        <h3>When to hold and when to bail out</h3>
+        <div class="callout"><b>Hold while you have 5 or more empty cells.</b> Take a 5-step out (3+4) if it comes first. At about 3 empty cells, cash out.</div>
+        <p class="muted" style="font-size:15px">Of 300 times a 6-step was ready (2-step search), <b class="num" style="color:var(--fg)">9%</b> fired the full six, <b class="num" style="color:var(--fg)">7%</b> settled for five, and most were lost. 223 of 251 losses happened at 2–4 empty cells, usually by cashing out part of the ladder. Ready boards averaged 5.5 empty cells.</p>
+        <h3>Load the blast</h3>
+        <p class="muted" style="font-size:15px">At ×720, every point of debris matters: one M caught in the blast adds 7 × 720 = 5,040. Debris comes from F's diagonal neighbours. Leave 5s, 6s or a spare M there, as long as they don't touch a rung of the same value. The AI barely does this (54 of 90 chains had no debris), so this tip comes from the arithmetic, not from watching the AI.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="ex-h">
+    <div class="eyebrow">Example positions</div>
+    <h2 id="ex-h">Six moves from the AI's games</h2>
+    <p class="prose muted">Each board is shown before and after the AI's move; outlined cells are where the piece went. Every one was re-checked with the game engine. Rows and columns count from 1 at the top left.</p>
+    <div class="examples" id="examples"></div>
+  </section>
+
+  <section aria-labelledby="ph-h">
+    <div class="eyebrow">Phases</div>
+    <h2 id="ph-h">The game in three parts</h2>
+    <div class="phases">
+      <div class="phase"><span class="when">Opening · up to about move 9</span><h3>Pairs and corners</h3><p class="muted">Only 1s, 2s and 3s exist. Dump 1s in corners and start pairs. About a third of moves merge. Short phase, thin evidence.</p></div>
+      <div class="phase"><span class="when">Middle · 4 to 6 unlocked, about 18 moves</span><h3>Grow inward</h3><p class="muted">The busiest merging phase (46% of moves). Steer growing tiles inward so the first 6s land on the ring diagonals and the first M near the hub. 6 unlocks around move 20, M around move 26.</p></div>
+      <div class="phase late"><span class="when">Late · M unlocked, over 98% of all moves</span><h3>The real game</h3><p class="muted">Furnace, onion and space discipline (rules 1–3), pairs over small merges when there's room. For a big merge, this is when you build the socket: the 6-step needs an M pair.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="cav-h">
+    <div class="eyebrow">Limits</div>
+    <h2 id="cav-h">What this guide can't tell you</h2>
+    <ul class="caveats">
+      <li>These are patterns in what the AI does, not proven causes. No rule was tested by switching it off.</li>
+      <li>The greedy comparison player is weak, so "better than greedy" doesn't show that each habit matters on its own.</li>
+      <li>Rule 7 (domino technique) shows little difference from greedy play.</li>
+      <li>The spawn odds (every unlocked value equally likely, half the pieces dominoes) are assumed, not confirmed for the iOS game. The opening is very short in this simulator, so the opening advice is thin.</li>
+      <li>The debris tip is arithmetic. The 70,560 board was found by search; no agent has played it.</li>
+      <li>Big-merge statistics rest on 90 six-step chains and 300 ready-to-fire episodes.</li>
+    </ul>
+  </section>
+
+  <footer>Data: 300 games by the score model (606,278 moves), 300 greedy games, 3,200 big-merge games, the 179,706-point record game and the 65,520-move game. All games use the rules confirmed from screen recordings of the iOS game.</footer>
+</main>
+
+<script>
+const EXAMPLES = [{"id":"A","src":"Record game (179,706 pts), move 3,246","rows":["22554",".4M.4","..M5.",".....","....."],"vals":[4],"cells":[[1,0]],"expect":0,"text":"A merge worth 64 points was available at row 2, col 4. With 15 empty cells the AI instead makes a loaded pair of 4s.","tag":"Pairs over small merges","before":[2,2,5,5,4,0,4,7,0,4,0,0,7,5,0,0,0,0,0,0,0,0,0,0,0],"after":[2,2,5,5,4,4,4,7,0,4,0,0,7,5,0,0,0,0,0,0,0,0,0,0,0],"placed":[5],"points":0,"chain":0,"steps":[],"booms":[]},{"id":"B","src":"Record game, move 5,050","rows":[".2511","3....","3MM55","...64","...24"],"vals":[7],"cells":[[3,2]],"expect":34,"text":"The furnace: an M pair on the hub and a plus cell. The third M is fired the moment it arrives.","tag":"Furnace","before":[0,2,5,1,1,3,0,0,0,0,3,7,7,5,5,0,0,0,6,4,0,0,0,2,4],"after":[0,2,5,1,1,3,0,0,0,0,3,0,0,0,5,0,0,0,0,4,0,0,0,0,4],"placed":[17],"points":34,"chain":1,"steps":[{"v":7,"n":3}],"booms":[3]},{"id":"C","src":"Record game, move 6,929","rows":["34141","514M3",".3M.5","32.23","11521"],"vals":[7],"cells":[[2,3]],"expect":38,"text":"Three empty cells left. The explosion clears five tiles besides the Ms: an emergency bomb.","tag":"Cash out and bomb","before":[3,4,1,4,1,5,1,4,7,3,0,3,7,0,5,3,2,0,2,3,1,1,5,2,1],"after":[3,4,1,4,1,5,1,0,0,0,0,3,0,0,0,3,2,0,0,0,1,1,5,2,1],"placed":[13],"points":38,"chain":1,"steps":[{"v":7,"n":3}],"booms":[5]},{"id":"D","src":"Record game, move 8,160","rows":["22.21","66M.1","3.M.3","3.553","44..4"],"vals":[5,3],"cells":[[2,1],[3,1]],"expect":9600,"text":"The best move of the 179,706 game: a 5-step ladder built during ordinary survival play, with the socket beside the furnace.","tag":"Ladder","before":[2,2,0,2,1,6,6,7,0,1,3,0,7,0,3,3,0,5,5,3,4,4,0,0,4],"after":[2,2,0,2,1,0,0,0,0,1,0,0,0,0,3,0,0,0,0,3,0,0,0,0,4],"placed":[11,16],"points":9600,"chain":5,"steps":[{"v":3,"n":3},{"v":4,"n":3},{"v":5,"n":4},{"v":6,"n":3},{"v":7,"n":3}],"booms":[0]},{"id":"E","src":"Big-merge model, seed 30, move 87","rows":["..421","56631","5.MM6","3.2.1","342.2"],"vals":[2,4],"cells":[[3,1],[2,1]],"expect":58320,"text":"The textbook socket. S at row 4, col 2 touches a 2 pair, a 3 pair and a single 4. F at row 3, col 2 touches a 5 pair, a 6 pair and the M pair.","tag":"Socket","before":[0,0,4,2,1,5,6,6,3,1,5,0,7,7,6,3,0,2,0,1,3,4,2,0,2],"after":[0,0,4,2,1,0,0,0,3,1,0,0,0,0,6,0,0,0,0,1,0,0,0,0,2],"placed":[16,11],"points":58320,"chain":6,"steps":[{"v":2,"n":3},{"v":3,"n":3},{"v":4,"n":3},{"v":5,"n":3},{"v":6,"n":3},{"v":7,"n":3}],"booms":[0]},{"id":"F","src":"Big-merge replay, move 881","rows":["M5M51","6565.","6.MM4","3.226","344.1"],"vals":[4,2],"cells":[[2,1],[3,1]],"expect":65520,"text":"The same socket as E, mirrored onto a column, plus a 4-tile group of 4s for extra points. A spare M sits parked in the corner instead of exploding.","tag":"Socket","before":[7,5,7,5,1,6,5,6,5,0,6,0,7,7,4,3,0,2,2,6,3,4,4,0,1],"after":[7,0,7,5,1,0,0,0,5,0,0,0,0,0,4,0,0,0,0,6,0,0,0,0,1],"placed":[11,16],"points":65520,"chain":6,"steps":[{"v":2,"n":3},{"v":3,"n":3},{"v":4,"n":4},{"v":5,"n":3},{"v":6,"n":3},{"v":7,"n":3}],"booms":[1]}];
+(function () {
+  const label = (v) => (v === 7 ? "M" : String(v));
+  function board(el, cells, opts = {}) {
+    el.innerHTML = "";
+    cells.forEach((v, i) => {
+      const d = document.createElement("div");
+      d.className = "c";
+      if (opts.slots && opts.slots[i]) { d.classList.add("slot"); d.textContent = opts.slots[i]; }
+      else if (v) { d.dataset.v = v; d.textContent = label(v); }
+      if (opts.placed && opts.placed.includes(i)) d.classList.add("placed");
+      el.appendChild(d);
+    });
+  }
+  // Zone map
+  const zm = document.getElementById("zonemap");
+  for (let i = 0; i < 25; i++) {
+    const r = Math.floor(i / 5), c = i % 5, d = document.createElement("div");
+    const rim = r === 0 || r === 4 || c === 0 || c === 4, corner = (r === 0 || r === 4) && (c === 0 || c === 4);
+    const hub = r === 2 && c === 2, plus = !rim && !hub && (r === 2 || c === 2);
+    d.className = "c zone " + (corner ? "corner" : rim ? "rim" : hub ? "hub" : plus ? "plus" : "ring");
+    d.textContent = corner ? "1s" : hub ? "M" : plus ? "M" : !rim ? "6" : "";
+    zm.appendChild(d);
+  }
+  // Bars
+  function bars(el, rows, max, fmt) {
+    el.innerHTML = rows.map(([l, v]) => `<div class="bar"><span class="lbl">${l}</span><span class="track"><span class="fill" style="width:${(v / max) * 100}%;display:block"></span></span><span class="val">${fmt(v)}</span></div>`).join("");
+  }
+  bars(document.getElementById("declineBars"), [["20+ empty", 32], ["16–19", 26], ["13–15", 21], ["10–12", 13], ["7–9", 4.9], ["≤ 6", 1.5]], 32, (v) => v + "%");
+  bars(document.getElementById("rungBars"), [["3 pair", 16], ["2 pair", 11], ["6 pair", 10], ["5 pair", 8], ["single 4", 7], ["M pair", 5]], 16, (v) => v);
+  // Socket board (example E): S = row 4 col 2, F = row 3 col 2
+  const E = EXAMPLES.find((e) => e.id === "E");
+  board(document.getElementById("socketBoard"), E.before, { slots: { 16: "S", 11: "F" } });
+  // Examples
+  const host = document.getElementById("examples");
+  for (const e of EXAMPLES) {
+    const card = document.createElement("article");
+    card.className = "ex";
+    const steps = e.steps.length
+      ? e.steps.map((s) => `${s.n}×${label(s.v)}`).join(" → ") + (e.booms.length ? " → boom" : "")
+      : "no merge";
+    card.innerHTML = `
+      <div class="top"><span class="tag">${e.tag}</span><span class="pts num">${e.points ? "+" + e.points.toLocaleString("en-US") : "0"}</span></div>
+      <div class="pair"><div><div class="board b1"></div><div class="cap">before</div></div><span class="arrow" aria-hidden="true">→</span><div><div class="board b2"></div><div class="cap">after</div></div></div>
+      <div class="piece">Piece ${e.vals.map((v) => `<span class="c" data-v="${v}">${label(v)}</span>`).join("")} <span class="mono" style="margin-left:6px">${e.chain > 1 ? e.chain + "-step chain: " : ""}${steps}</span></div>
+      <p>${e.text}</p>
+      <div class="src">${e.src}</div>`;
+    host.appendChild(card);
+    board(card.querySelector(".b1"), e.before, { placed: e.placed });
+    board(card.querySelector(".b2"), e.after, { placed: e.placed });
+    card.querySelector(".b1").setAttribute("aria-label", "Board before the move");
+    card.querySelector(".b2").setAttribute("aria-label", "Board after the move");
+  }
+})();
+</script>
