@@ -101,6 +101,7 @@ int main(int argc, char** argv) {
     }
 
     std::vector<int64_t> scores(games), bigs(games, 0);
+    std::vector<int> chains(games, 0);  // longest chain (merge steps) in one move
     // Per-game move log (only with --record): piece values, cells, points.
     struct Rec { uint8_t v0, v1, a, b; int64_t pts; };
     std::vector<std::vector<Rec>> logs(record.empty() ? 0 : games);
@@ -119,8 +120,14 @@ int main(int argc, char** argv) {
             while (g.legal(ms) > 0) {
                 Move mv = ag->choose(g, arng);
                 Piece p = g.next;
+                int chain = 0;
+                {
+                    Board probe = g.b;
+                    apply(probe, p, mv, R, &chain);
+                }
                 int64_t pts = g.play(mv);
                 bigs[i] = std::max(bigs[i], pts);
+                chains[i] = std::max(chains[i], chain);
                 if (!record.empty()) logs[i].push_back({p.v[0], uint8_t(p.n == 2 ? p.v[1] : 0), mv.a, mv.b, pts});
             }
             scores[i] = g.score; lengths[i] = g.moves;
@@ -157,6 +164,13 @@ int main(int argc, char** argv) {
         for (auto x : bigs) mb += double(x);
         std::printf("biggest single move per game: mean=%.0f  median=%lld  max=%lld (seed %llu)\n", mb / games,
                     (long long)sb[sb.size() / 2], (long long)sb.back(), (unsigned long long)(seed + big_i));
+    }
+    {
+        int hist[16] = {};
+        for (int c : chains) hist[std::min(c, 15)]++;
+        std::printf("longest chain per game:");
+        for (int c = 1; c < 8; c++) if (hist[c]) std::printf("  %d-step: %.1f%%", c, 100.0 * hist[c] / games);
+        std::printf("\n");
     }
     if (record_by_merge) best_i = big_i;
     std::printf("best game: seed=%llu score=%lld moves=%d  (rerun with --seed %llu --games 1 --threads 1)\n",

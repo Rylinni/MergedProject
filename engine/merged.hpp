@@ -111,13 +111,14 @@ struct Resolver {
     Board& b;
     const Rules& R;
     int64_t withheld = 0, mult = 1;
-    int merges = 0;
+    int merges = 0, longest = 0;  // longest: most consecutive merges (chain length)
     Resolver(Board& bd, const Rules& r) : b(bd), R(r) {}
 
     void upgrade(int p) {
         b.c[p]++;
         merges++;
         mult *= merges;
+        longest = std::max(longest, merges);
         if (b.c[p] == EXPLODE) {
             for (uint32_t m = T.box[p]; m; m &= m - 1) {
                 int i = __builtin_ctz(m);
@@ -146,8 +147,9 @@ struct Resolver {
 };
 
 // Place `p` with `mv` on `b` (cells must be empty) and resolve merges.
-// Returns points scored. Mirrors playMove + evalBoard.
-inline int64_t apply(Board& b, const Piece& p, Move mv, const Rules& R) {
+// Returns points scored. Mirrors playMove + evalBoard. If chain is given, it
+// receives the longest run of consecutive merges (the multiplier is its factorial).
+inline int64_t apply(Board& b, const Piece& p, Move mv, const Rules& R, int* chain = nullptr) {
     Resolver r(b, R);
     int64_t banked = 0;
     if (p.n == 1) {
@@ -174,6 +176,7 @@ inline int64_t apply(Board& b, const Piece& p, Move mv, const Rules& R) {
             while (up) { v++; up = r.eval_piece(v, bc, sc, sv, false); }
         }
     }
+    if (chain) *chain = r.longest;
     return banked + r.mult * r.withheld;
 }
 
