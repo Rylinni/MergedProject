@@ -54,6 +54,27 @@ policy is also (within noise) the top-score policy. **For a record game, use the
 model with the deepest affordable search and run many games:** the best of N grows with
 N. `merged_eval` prints the seed of the best game so it can be replayed exactly.
 
+## Largest-merge mode
+
+Goal: the most points in a single move. All on the same 1,000 seeds with 1-step search, except the last row.
+
+| Model | Avg biggest move per game | Median | Best | Avg total score |
+|---|---|---|---|---|
+| Main model (`--objective sum`) | 1,179 | 402 | 58,320 | 22,845 |
+| Pure max objective (`--objective max`, from scratch) | 1,419 | 120 | 7,200 | 1,611 |
+| Big-merge (`--objective convex:5000`, fine-tuned from main) | 2,426 | 348 | 62,640 | 6,148 |
+| Big-merge, 2-step search (100 games) | 10,434 | 1,008 | 65,520 | 20,176 |
+
+`--objective max` learns "biggest single move still to come" and plays max(points, V). It learns
+to rush one explosion and die (games of ~45 moves), so its ceiling is low. Fine-tuning the main
+model with it made games collapse the same way. `convex:K` keeps the sum (so surviving still
+pays) but rewards points + points²/K, which makes big chains worth far more than small merges.
+It doubles the average biggest move and keeps the high ceiling. The 65,520 move is a 6-step chain
+(91 points × 720) ending in an M explosion.
+
+`merged_eval --record-by merge` records the game with the biggest single move instead of the
+highest score.
+
 ## Evaluate an agent
 
 ```bash

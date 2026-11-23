@@ -1,4 +1,4 @@
-<title>Record Run Replay</title>
+<title>/*__TITLE__*/</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -254,7 +254,8 @@ function start(RUN) {
   scrub.max = M;
   $("totalLabel").textContent = `${fmt(M)} moves`;
   $("title").textContent = `${fmt(RUN.score)} points`;
-  $("subtitle").innerHTML = `The best of 20 games by the <b>learned model with 2-step search</b> · ${fmt(M)} moves · seed ${RUN.seed}`;
+  $("subtitle").innerHTML = `${RUN.label || "The best game by the <b>learned model with 2-step search</b>"} · ${fmt(M)} moves · seed ${RUN.seed}`;
+  if (RUN.headline === "merge") $("title").textContent = `+${fmt(top[0].r.points)} in one move`;
 
   function showReplay(animate) {
     const c = boards[k];
@@ -285,7 +286,11 @@ function start(RUN) {
     $("moveLabel").textContent = `move ${fmt(k)}`;
     $("back").disabled = k === 0; $("fwd").disabled = k === M;
     if (animate && k > 0) floatPoints(results[k - 1]);
-    for (const el of document.querySelectorAll(".hl")) el.classList.toggle("active", +el.dataset.k === k - 1);
+    for (const el of document.querySelectorAll(".hl")) {
+      const on = +el.dataset.k === k - 1 || +el.dataset.k === k;
+      el.classList.toggle("active", on);
+      if (on) { const list = $("hl"); list.scrollTop = el.parentElement.offsetTop - list.offsetTop - list.clientHeight / 2 + 20; }
+    }
     drawTimeline();
   }
   function go(to, animate) { k = Math.max(0, Math.min(M, to)); showReplay(animate); }
