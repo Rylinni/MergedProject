@@ -32,7 +32,8 @@ static void usage() {
         "usage: merged_train --out FILE [--in FILE] [--games N] [--threads T] [--alpha A]\n"
         "                    [--alpha-end A] [--report N] [--seed S] [--legacy]\n"
         "                    [--moments-in FILE] [--moments-out FILE] [--risk L]\n"
-        "                    [--objective sum|max]   (max = largest single merge)\n"
+        "                    [--objective sum|max|convex:K]\n"
+        "                      max = largest single merge; convex:K = reward pts + pts^2/K\n"
         "  alpha is the total step size (spread over all lookups); it decays\n"
         "  geometrically from --alpha to --alpha-end over the run.\n");
     std::exit(2);
@@ -42,6 +43,7 @@ int main(int argc, char** argv) {
     std::string out, in, mom_in, mom_out;
     double risk = 0;
     bool max_obj = false;
+    double convex_k = 0;
     long games = 100000, report = 5000;
     int threads = std::max(1u, std::thread::hardware_concurrency());
     double alpha = 0.1, alpha_end = -1;
@@ -62,7 +64,12 @@ int main(int argc, char** argv) {
         else if (a == "--moments-in") mom_in = next();
         else if (a == "--moments-out") mom_out = next();
         else if (a == "--risk") risk = std::atof(next());
-        else if (a == "--objective") { std::string o = next(); if (o == "max") max_obj = true; else if (o != "sum") usage(); }
+        else if (a == "--objective") {
+            std::string o = next();
+            if (o == "max") max_obj = true;
+            else if (o.rfind("convex:", 0) == 0) convex_k = std::atof(o.c_str() + 7);
+            else if (o != "sum") usage();
+        }
         else usage();
     }
     if (out.empty()) usage();
@@ -105,12 +112,14 @@ int main(int argc, char** argv) {
                     Board nb = g.b;
                     int64_t pts = apply(nb, g.next, ms[i], R);
                     double fut = risk != 0 ? risk_eval(nb) : (nb.empty() ? net.value(nb) : 0.0);
-                    double v = max_obj ? std::max(double(pts), fut) : double(pts) + fut;
+                    double sp = convex_k > 0 ? double(pts) + double(pts) * double(pts) / convex_k : double(pts);
+                    double v = max_obj ? std::max(double(pts), fut) : sp + fut;
                     if (v > bv) { bv = v; bi = i; bafter = nb; bpts = pts; }
                 }
                 if (have_prev) {
                     double va = bafter.empty() ? net.value(bafter) : 0.0;
-                    double target = max_obj ? std::max(double(bpts), va) : double(bpts) + va;
+                    double sb = convex_k > 0 ? double(bpts) + double(bpts) * double(bpts) / convex_k : double(bpts);
+                    double target = max_obj ? std::max(double(bpts), va) : sb + va;
                     net.update(prev, float(step * (target - net.value(prev))));
                     if (moments) {
                         double r = double(bpts) / RiskEval::SCALE, vs = va / RiskEval::SCALE;

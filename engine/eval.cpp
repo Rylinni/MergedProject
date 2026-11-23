@@ -23,7 +23,7 @@ static void usage() {
         "usage: merged_eval [--agent random|greedy|expectimax|ntuple] [--depth D] [--games N]\n"
         "                   [--weights FILE]   (n-tuple weights for --agent ntuple)\n"
         "                   [--moments FILE --risk L]  (top-score mode: maximise V + L*std)\n"
-        "                   [--objective sum|max]      (max: weights trained for the largest merge)\n"
+        "                   [--objective sum|max|convex:K]  (must match how the weights were trained)\n"
         "                   [--record-by score|merge]  (which game --record keeps)\n"
         "                   [--seed S] [--threads T] [--csv FILE] [--record FILE]\n"
         "  --record writes the best game's full move list as JSON\n"
@@ -37,6 +37,7 @@ int main(int argc, char** argv) {
     std::string agent = "greedy", csv, weights, moments, record;
     double risk = 0;
     bool max_obj = false, record_by_merge = false;
+    double convex_k = 0;
     int depth = 1, games = 1000, threads = std::max(1u, std::thread::hardware_concurrency());
     uint64_t seed = 1;
     Rules R;
@@ -54,7 +55,12 @@ int main(int argc, char** argv) {
         else if (a == "--weights") weights = next();
         else if (a == "--moments") moments = next();
         else if (a == "--risk") risk = std::atof(next());
-        else if (a == "--objective") { std::string o = next(); if (o == "max") max_obj = true; else if (o != "sum") usage(); }
+        else if (a == "--objective") {
+            std::string o = next();
+            if (o == "max") max_obj = true;
+            else if (o.rfind("convex:", 0) == 0) convex_k = std::atof(o.c_str() + 7);
+            else if (o != "sum") usage();
+        }
         else if (a == "--record-by") { std::string o = next(); if (o == "merge") record_by_merge = true; else if (o != "score") usage(); }
         else if (a == "--w-empty") H.w_empty = std::atof(next());
         else if (a == "--w-pair") H.w_pair = std::atof(next());
@@ -104,7 +110,7 @@ int main(int argc, char** argv) {
     auto worker = [&]() {
         std::unique_ptr<Agent> ag;
         if (agent == "random") ag.reset(new RandomAgent());
-        else if (agent == "expectimax" || agent == "ntuple") ag.reset(new ExpectimaxAgent(depth, R, *ev, max_obj));
+        else if (agent == "expectimax" || agent == "ntuple") ag.reset(new ExpectimaxAgent(depth, R, *ev, max_obj, convex_k));
         else usage();
         Move ms[MAX_MOVES];
         for (int i; (i = next_game++) < games;) {

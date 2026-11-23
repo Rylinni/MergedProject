@@ -79,9 +79,13 @@ struct ExpectimaxAgent : Agent {
     const Evaluator& h;
     Rules R;
     bool max_objective = false;  // "largest merge" mode: value = biggest single move to come
-    ExpectimaxAgent(int d, const Rules& r, const Evaluator& e, bool max_obj = false)
-        : depth(d), h(e), R(r), max_objective(max_obj) {}
-    double combine(double pts, double future) const { return max_objective ? std::max(pts, future) : pts + future; }
+    double convex_k = 0;         // big-merge mode: reward = pts + pts^2 / K (0 = plain points)
+    ExpectimaxAgent(int d, const Rules& r, const Evaluator& e, bool max_obj = false, double k = 0)
+        : depth(d), h(e), R(r), max_objective(max_obj), convex_k(k) {}
+    double shaped(double pts) const { return convex_k > 0 ? pts + pts * pts / convex_k : pts; }
+    double combine(double pts, double future) const {
+        return max_objective ? std::max(pts, future) : shaped(pts) + future;
+    }
 
     // Expected future points from an afterstate, searching `d` more placements.
     double after_value(const Board& b, int d) const {
