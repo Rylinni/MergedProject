@@ -347,7 +347,7 @@ function start(RUN) {
     g.fillStyle = accent;
     for (const { k: mk } of highlights) { g.beginPath(); g.arc(X(mk + 1), Y(scores[mk + 1]), 3.2, 0, 7); g.fill(); }
     g.strokeStyle = accent; g.lineWidth = 2; g.beginPath(); g.moveTo(X(k), pad.t); g.lineTo(X(k), pad.t + H); g.stroke();
-    g.fillStyle = muted; g.fillText("move " + fmt(k), Math.min(X(k) + 4, w - 70), h - 3);
+    g.fillStyle = muted; const tlabel = "move " + fmt(k); g.fillText(tlabel, Math.min(X(k) + 4, w - g.measureText(tlabel).width - 4), h - 3);
   }
   tl.onclick = (e) => { const rect = tl.getBoundingClientRect(); exitPlay(); setPlaying(false); go(Math.round(((e.clientX - rect.left - 4) / (rect.width - 8)) * M), false); };
   window.addEventListener("resize", drawTimeline);

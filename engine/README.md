@@ -65,6 +65,24 @@ Goal: the most points in a single move. All on the same 1,000 seeds with 1-step 
 | Big-merge (`--objective convex:5000`, fine-tuned from main) | 2,426 | 348 | 62,640 | 6,148 |
 | Big-merge, 2-step search (100 games) | 10,434 | 1,008 | 65,520 | 20,176 |
 
+Sweep of K for `convex:K` (each fine-tuned 60k games from the main checkpoint; 1,000 games, 1-step):
+
+| K | Avg biggest move | Best | Games with a 6-step chain | Avg total score |
+|---|---|---|---|---|
+| 500 (from the K=5000 model) | 759 | 61,200 | 0.6% | 1,466 |
+| 2,000 | 979 | 61,200 | 0.9% | ~3,500 |
+| 5,000 | 2,426 | 62,640 | 2.3% | 6,148 |
+| **15,000** | **3,050** | **64,080** | **2.4%** | ~18,000 |
+| 50,000 | 1,360 | 10,680 | 0% | 27,834 |
+
+Too strong a weighting kills survival, and with it the chances to set up a chain; too weak and it
+plays like the main model. K = 15,000 is the best big-merge setting. Note that K = 50,000 scored
+27,834 total on the same seeds where `main_final.bin` scored 25,631 (about 1.9 standard errors):
+a mild reward for big merges may also help total score. Not yet confirmed.
+
+The largest single move possible (found by `build/maxmerge`, annealing over legal boards) is
+70,560: a 2+4 domino, 2→3→4, hand-off, 5→6→M→explosion, 98 × 720.
+
 `--objective max` learns "biggest single move still to come" and plays max(points, V). It learns
 to rush one explosion and die (games of ~45 moves), so its ceiling is low. Fine-tuning the main
 model with it made games collapse the same way. `convex:K` keeps the sum (so surviving still
@@ -92,7 +110,12 @@ error, median, p90, p99, max, moves per game, and the highest value unlocked.
 | Random | 200k | 84 ± 0.1 | 72 | 1,197 |
 | Old sklearn MLP (`nnai.sav`, Python, mergedMain rules) | 200 | 476 ± 23 | 392 | 2,862 |
 | Greedy: points + 10·empty + 3·v·(equal pairs) | 20k | 3,076 ± 21 | 2,156 | 32,792 |
-| Expectimax depth 2, same heuristic | 200 | 44,281 ± 3,010 | 30,916 | 211,133 |
+| Expectimax depth 2, same heuristic (old domino rule) | 200 | 44,281 ± 3,010 | 30,916 | 211,133 |
+| **n-tuple `models/main_final.bin`, depth 1** | 2,000 | 25,765 ± 563 | 18,322 | 181,055 |
+| **n-tuple `models/main_final.bin`, depth 2** | 40 | 125,880 ± 20,696 | 89,163 | 486,247 |
+
+Rows from the n-tuple model use the current rules (dominoes spawn whenever an adjacent empty
+pair exists). The 486,247 game (seed 95035, 34,935 moves) is the one in the record replay page.
 
 ## Rules: what is confirmed and what is not
 
