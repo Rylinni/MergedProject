@@ -23,7 +23,8 @@ static void usage() {
         "usage: merged_eval [--agent random|greedy|expectimax|ntuple] [--depth D] [--games N]\n"
         "                   [--weights FILE]   (n-tuple weights for --agent ntuple)\n"
         "                   [--moments FILE --risk L]  (top-score mode: maximise V + L*std)\n"
-        "                   [--seed S] [--threads T] [--csv FILE]\n"
+        "                   [--seed S] [--threads T] [--csv FILE] [--record FILE]\n"
+        "  --record writes the best game's full move list as JSON\n"
         "                   [--w-empty X] [--w-pair X]\n"
         "  rules: [--legacy-scoring] [--p-double P] [--double-anywhere] [--double-same-ok]\n"
         "         [--double-room interior|adjacent|two-empty] [--max-spawn V] [--spawn-weights w1,w2,...,w7]\n");
@@ -31,7 +32,7 @@ static void usage() {
 }
 
 int main(int argc, char** argv) {
-    std::string agent = "greedy", csv, weights, moments;
+    std::string agent = "greedy", csv, weights, moments, record;
     double risk = 0;
     int depth = 1, games = 1000, threads = std::max(1u, std::thread::hardware_concurrency());
     uint64_t seed = 1;
@@ -46,6 +47,7 @@ int main(int argc, char** argv) {
         else if (a == "--seed") seed = std::strtoull(next(), nullptr, 10);
         else if (a == "--threads") threads = std::atoi(next());
         else if (a == "--csv") csv = next();
+        else if (a == "--record") record = next();
         else if (a == "--weights") weights = next();
         else if (a == "--moments") moments = next();
         else if (a == "--risk") risk = std::atof(next());
@@ -88,6 +90,9 @@ int main(int argc, char** argv) {
     }
 
     std::vector<int64_t> scores(games);
+    // Per-game move log (only with --record): piece values, cells, points.
+    struct Rec { uint8_t v0, v1, a, b; int64_t pts; };
+    std::vector<std::vector<Rec>> logs(record.empty() ? 0 : games);
     std::vector<int> lengths(games), top(games);
     std::atomic<int> next_game{0};
     auto t0 = std::chrono::steady_clock::now();
@@ -100,7 +105,12 @@ int main(int argc, char** argv) {
         for (int i; (i = next_game++) < games;) {
             Game g(R, seed + uint64_t(i));
             Rng arng(~(seed + uint64_t(i)));
-            while (g.legal(ms) > 0) g.play(ag->choose(g, arng));
+            while (g.legal(ms) > 0) {
+                Move mv = ag->choose(g, arng);
+                Piece p = g.next;
+                int64_t pts = g.play(mv);
+                if (!record.empty()) logs[i].push_back({p.v[0], uint8_t(p.n == 2 ? p.v[1] : 0), mv.a, mv.b, pts});
+            }
             scores[i] = g.score; lengths[i] = g.moves;
             top[i] = 31 - __builtin_clz(g.b.unlocked);
         }
@@ -134,6 +144,18 @@ int main(int argc, char** argv) {
     for (int v = 2; v <= M; v++) std::printf(" %d:%.1f%%", v, 100.0 * reach[v] / games);
     std::printf("\ntime=%.1fs  (%.2f games/s, %d threads)\n", secs, games / secs, threads);
 
+    if (!record.empty()) {
+        FILE* f = std::fopen(record.c_str(), "w");
+        std::fprintf(f, "{\"agent\":\"%s\",\"depth\":%d,\"seed\":%llu,\"score\":%lld,\"moves\":[", agent.c_str(),
+                     depth, (unsigned long long)(seed + best_i), (long long)scores[best_i]);
+        for (size_t k = 0; k < logs[best_i].size(); k++) {
+            auto& r = logs[best_i][k];
+            std::fprintf(f, "%s[%d,%d,%d,%d,%lld]", k ? "," : "", r.v0, r.v1, r.a, r.b == NONE ? -1 : r.b,
+                         (long long)r.pts);
+        }
+        std::fprintf(f, "]}\n");
+        std::fclose(f);
+    }
     if (!csv.empty()) {
         FILE* f = std::fopen(csv.c_str(), "w");
         std::fprintf(f, "game,seed,score,moves,highest_unlocked\n");
