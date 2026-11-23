@@ -186,8 +186,8 @@ button:disabled { opacity: 0.45; cursor: default; }
 /*__ENGINE__*/
 </script>
 <script>
-const RUN = /*__RUN__*/;
-(function () {
+const RUN_INLINE = /*__RUN__*/;
+function start(RUN) {
   const E = window.MergeEngine;
   const $ = (id) => document.getElementById(id);
   const fmt = (n) => Math.round(n).toLocaleString("en-US");
@@ -446,5 +446,9 @@ const RUN = /*__RUN__*/;
 
   // Open on the run's biggest moment, just before it happens.
   go(Math.max(0, top[0].k), false);
-})();
+}
+// The run is inlined by build.py, or published beside the page as run.json.
+if (RUN_INLINE) start(RUN_INLINE);
+else fetch("run.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(start)
+  .catch(() => { document.getElementById("subtitle").textContent = "Could not load the recorded run (run.json). Reload the page to try again."; });
 </script>
