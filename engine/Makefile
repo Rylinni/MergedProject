@@ -3,7 +3,10 @@ CXXFLAGS ?= -O3 -march=native -std=c++17 -Wall -Wextra
 BUILD := build
 HEADERS := merged.hpp agents.hpp ntuple.hpp
 
-all: $(BUILD)/merged_eval $(BUILD)/merged_train $(BUILD)/maxmerge $(BUILD)/libmerged.so
+all: $(BUILD)/merged_eval $(BUILD)/merged_train $(BUILD)/merged_goal $(BUILD)/maxmerge $(BUILD)/libmerged.so
+
+$(BUILD)/merged_goal: goal.cpp $(HEADERS) | $(BUILD)
+	$(CXX) $(CXXFLAGS) -pthread -o $@ goal.cpp
 
 $(BUILD)/maxmerge: maxmerge.cpp merged.hpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -o $@ maxmerge.cpp
