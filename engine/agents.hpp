@@ -4,17 +4,23 @@
 #include <limits>
 
 #include "merged.hpp"
+#include "ntuple.hpp"
 
 namespace merged {
 
-// Hand-written estimate of future points from a position (Phase 1 baseline;
-// to be replaced by a learned n-tuple value function).
-struct Heuristic {
+// Estimate of future points from an afterstate (board after a move resolved).
+struct Evaluator {
+    virtual ~Evaluator() = default;
+    virtual double operator()(const Board& b) const = 0;
+};
+
+// Hand-written baseline.
+struct Heuristic : Evaluator {
     double w_empty = 10.0;  // per empty cell
     double w_pair = 3.0;    // per adjacent equal pair, times value
-    double operator()(const Board& b) const {
+    double operator()(const Board& b) const override {
         uint32_t e = b.empty();
-        if (!e) return 0.0;  // board full => game over (domino room is guaranteed otherwise)
+        if (!e) return 0.0;  // board full => game over (a domino only spawns if it fits)
         double h = w_empty * popcount(e);
         for (int i = 0; i < CELLS; i++) {
             int v = b.c[i];
@@ -25,6 +31,13 @@ struct Heuristic {
         }
         return h;
     }
+};
+
+// Learned n-tuple value function.
+struct NTupleEval : Evaluator {
+    const NTuple& net;
+    explicit NTupleEval(const NTuple& n) : net(n) {}
+    double operator()(const Board& b) const override { return b.empty() ? net.value(b) : 0.0; }
 };
 
 struct Agent {
@@ -41,12 +54,12 @@ struct RandomAgent : Agent {
 };
 
 // Expectimax over the real next-piece distribution. depth = number of piece
-// placements searched (1 = greedy on points + heuristic).
+// placements searched (1 = greedy on points + evaluator).
 struct ExpectimaxAgent : Agent {
     int depth;
-    Heuristic h;
+    const Evaluator& h;
     Rules R;
-    explicit ExpectimaxAgent(int d, const Rules& r, Heuristic hh = Heuristic()) : depth(d), h(hh), R(r) {}
+    ExpectimaxAgent(int d, const Rules& r, const Evaluator& e) : depth(d), h(e), R(r) {}
 
     // Expected future points from an afterstate, searching `d` more placements.
     double after_value(const Board& b, int d) const {

@@ -48,7 +48,11 @@ struct Rules {
     bool explosion_scores_cleared = true;  // tiles destroyed by an M explosion score their value
     // Spawning (M spawning and ~50% dominoes are consistent with recordings; the rest unconfirmed):
     double p_double = 0.5;               // chance the next piece is a domino (if there is room)
-    bool double_room_interior_only = true;  // mergedMain quirk: only interior cells are checked for domino room
+    // When may a domino spawn? In the iOS game: whenever it can be placed, i.e. some
+    // adjacent pair of cells is empty (confirmed by the game's owner). mergedMain only
+    // looked for such a pair among interior cells. TwoEmpty is kept as an experiment.
+    enum class DoubleRoom { InteriorAdjacent, AdjacentPair, TwoEmpty };
+    DoubleRoom double_room = DoubleRoom::AdjacentPair;
     bool double_distinct = true;         // mergedMain: domino halves always differ
     int max_spawn = M;                   // highest value that can spawn (once unlocked); 6 = M never spawns
     double weight[EXPLODE] = {0, 1, 1, 1, 1, 1, 1, 1};  // relative spawn weight per value
@@ -57,6 +61,7 @@ struct Rules {
         Rules r;
         r.bank_smaller_half = false;
         r.explosion_scores_cleared = false;
+        r.double_room = DoubleRoom::InteriorAdjacent;
         return r;
     }
 };
@@ -174,7 +179,8 @@ inline int64_t apply(Board& b, const Piece& p, Move mv, const Rules& R) {
 
 inline bool room_for_double(const Board& b, const Rules& R) {
     uint32_t e = b.empty();
-    uint32_t cand = R.double_room_interior_only ? (e & T.interior) : e;
+    if (R.double_room == Rules::DoubleRoom::TwoEmpty) return popcount(e) >= 2;
+    uint32_t cand = R.double_room == Rules::DoubleRoom::InteriorAdjacent ? (e & T.interior) : e;
     for (; cand; cand &= cand - 1)
         if (T.nb[__builtin_ctz(cand)] & e) return true;
     return false;

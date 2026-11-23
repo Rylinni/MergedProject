@@ -74,8 +74,12 @@ def legal_moves(board, values):
     return res
 
 
-def room_for_double(board, interior_only=True):
-    return bool(_lib.mg_room_for_double(_cells(board), int(interior_only)))
+_ROOM_MODES = {"interior": 0, "adjacent": 1, "two-empty": 2}
+
+
+def room_for_double(board, mode="interior"):
+    """Can a domino spawn? mode: "interior" (mergedMain), "adjacent", "two-empty" (iOS)."""
+    return bool(_lib.mg_room_for_double(_cells(board), _ROOM_MODES[mode]))
 
 
 def _decode(arr):

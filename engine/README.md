@@ -16,6 +16,21 @@ results after every move (board, score, unlocks), legal moves, the domino-room c
 and the next-piece distribution, across random-play and dense synthetic boards
 (chains, partner merges, M explosions). Six deliberate engine bugs were each caught by it.
 
+## Train the n-tuple value network (Phase 2)
+
+```bash
+engine/build/merged_train --out weights.bin --games 2000000 --alpha 0.05 --alpha-end 0.01
+engine/build/merged_eval --agent ntuple --weights weights.bin --depth 1 --games 2000
+engine/build/merged_eval --agent ntuple --weights weights.bin --depth 2 --games 200
+```
+
+`ntuple.hpp`: seven lookup tables (four 2×3 blocks and three full rows, each applied to all
+8 rotations/reflections of the board) plus a table on the number of empty cells. That is 1.1M
+weights (4.6 MB) and 57 lookups per evaluation. The value is the expected future points from
+the position right after a move. `train.cpp` learns it by self-play with TD(0): each
+position's value moves towards (next move's points + next position's value). It uses all
+cores, saves a checkpoint every `--report` games, and `--in` resumes from a checkpoint.
+
 ## Evaluate an agent
 
 ```bash
@@ -50,14 +65,15 @@ Confirmed from recordings (all matched exactly, including board after the move):
 - **Changed from mergedMain:** three M's explode the 3×3 around the placed M, and the
   destroyed tiles score their values (21 + 10 = 31; mergedMain gave 21).
 - M's spawn as pieces once unlocked, including in dominoes ([M,3], [4,M]).
+- A domino spawns whenever it can be placed, i.e. some adjacent pair of cells is empty
+  (game owner). mergedMain only checked interior cells (`--double-room interior`).
 - Roughly half of pieces are dominoes (12 of 23 seen); every domino seen had two different values.
 
-Still unconfirmed. Greedy-agent mean, 20k games each:
+Still unconfirmed:
 
 | Setting | Current default | Alternative | Greedy mean |
 |---|---|---|---|
-| Spawn weight per value | uniform over unlocked | `--weights 4,4,2,2,1,1,1` | 3,076 → 914 |
-| Room for a domino | interior cells only (mergedMain quirk) | anywhere (`--double-anywhere`) | 3,076 → 2,322 |
+| Spawn weight per value | uniform over unlocked (assumed) | `--spawn-weights 4,4,2,2,1,1,1` | large drop |
 | Exact domino chance | 0.5 | `--p-double P` | very sensitive |
 | Opening pieces | fully random | reviews mention a gentler ramp | small |
 

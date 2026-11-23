@@ -39,20 +39,21 @@ int mg_legal(const uint8_t* cells, int n, const uint8_t* vals, uint8_t* out) {
     return k;
 }
 
-int mg_room_for_double(const uint8_t* cells, int interior_only) {
+// mode: 0 = interior adjacent pair (mergedMain), 1 = adjacent pair anywhere, 2 = any two empty cells
+int mg_room_for_double(const uint8_t* cells, int mode) {
     Board b;
     for (int i = 0; i < CELLS; i++) b.c[i] = cells[i];
     Rules R;
-    R.double_room_interior_only = interior_only != 0;
+    R.double_room = Rules::DoubleRoom(mode);
     return room_for_double(b, R);
 }
 
-// Sample `count` pieces with default rules; counts[v0 * 8 + v1] (v0 <= v1; v1 = 0 for singles).
+// Sample `count` pieces with mergedMain spawn rules; counts[v0 * 8 + v1] (v0 <= v1; v1 = 0 for singles).
 void mg_spawn_counts(const uint8_t* cells, uint8_t unlocked, unsigned long long seed, int count, int* counts) {
     Board b;
     for (int i = 0; i < CELLS; i++) b.c[i] = cells[i];
     b.unlocked = unlocked;
-    Rules R;
+    Rules R = Rules::legacy();
     Rng rng(seed);
     for (int i = 0; i < count; i++) {
         Piece p = spawn(b, R, rng);
@@ -62,13 +63,13 @@ void mg_spawn_counts(const uint8_t* cells, uint8_t unlocked, unsigned long long 
     }
 }
 
-// Exact next-piece distribution with default rules; same key layout as mg_spawn_counts.
+// Exact next-piece distribution with mergedMain spawn rules; same key layout as mg_spawn_counts.
 void mg_piece_distribution(const uint8_t* cells, uint8_t unlocked, double* probs) {
     Board b;
     for (int i = 0; i < CELLS; i++) b.c[i] = cells[i];
     b.unlocked = unlocked;
     PieceProb pp[64];
-    int n = piece_distribution(b, Rules(), pp);
+    int n = piece_distribution(b, Rules::legacy(), pp);
     for (int i = 0; i < n; i++) probs[pp[i].p.v[0] * 8 + (pp[i].p.n == 2 ? pp[i].p.v[1] : 0)] += pp[i].prob;
 }
 }

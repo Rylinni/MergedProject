@@ -20,16 +20,17 @@ using namespace merged;
 
 static void usage() {
     std::fprintf(stderr,
-        "usage: merged_eval [--agent random|greedy|expectimax] [--depth D] [--games N]\n"
+        "usage: merged_eval [--agent random|greedy|expectimax|ntuple] [--depth D] [--games N]\n"
+        "                   [--weights FILE]   (n-tuple weights for --agent ntuple)\n"
         "                   [--seed S] [--threads T] [--csv FILE]\n"
         "                   [--w-empty X] [--w-pair X]\n"
         "  rules: [--legacy-scoring] [--p-double P] [--double-anywhere] [--double-same-ok]\n"
-        "         [--max-spawn V] [--weights w1,w2,...,w7]\n");
+        "         [--double-room interior|adjacent|two-empty] [--max-spawn V] [--spawn-weights w1,w2,...,w7]\n");
     std::exit(2);
 }
 
 int main(int argc, char** argv) {
-    std::string agent = "greedy", csv;
+    std::string agent = "greedy", csv, weights;
     int depth = 1, games = 1000, threads = std::max(1u, std::thread::hardware_concurrency());
     uint64_t seed = 1;
     Rules R;
@@ -43,14 +44,23 @@ int main(int argc, char** argv) {
         else if (a == "--seed") seed = std::strtoull(next(), nullptr, 10);
         else if (a == "--threads") threads = std::atoi(next());
         else if (a == "--csv") csv = next();
+        else if (a == "--weights") weights = next();
         else if (a == "--w-empty") H.w_empty = std::atof(next());
         else if (a == "--w-pair") H.w_pair = std::atof(next());
         else if (a == "--legacy-scoring") { R.bank_smaller_half = false; R.explosion_scores_cleared = false; }
+        else if (a == "--legacy") R = Rules::legacy();
         else if (a == "--p-double") R.p_double = std::atof(next());
-        else if (a == "--double-anywhere") R.double_room_interior_only = false;
+        else if (a == "--double-anywhere") R.double_room = Rules::DoubleRoom::AdjacentPair;
+        else if (a == "--double-room") {
+            std::string m = next();
+            if (m == "interior") R.double_room = Rules::DoubleRoom::InteriorAdjacent;
+            else if (m == "adjacent") R.double_room = Rules::DoubleRoom::AdjacentPair;
+            else if (m == "two-empty") R.double_room = Rules::DoubleRoom::TwoEmpty;
+            else usage();
+        }
         else if (a == "--double-same-ok") R.double_distinct = false;
         else if (a == "--max-spawn") R.max_spawn = std::atoi(next());
-        else if (a == "--weights") {
+        else if (a == "--spawn-weights") {
             std::string w = next();
             int v = 1;
             for (size_t p = 0; v < EXPLODE && p <= w.size(); v++) {
@@ -62,6 +72,12 @@ int main(int argc, char** argv) {
         } else usage();
     }
     if (agent == "greedy") { agent = "expectimax"; depth = 1; }
+    NTuple net;
+    std::unique_ptr<Evaluator> ev(new Heuristic(H));
+    if (agent == "ntuple") {
+        if (weights.empty() || !net.load(weights)) { std::fprintf(stderr, "cannot load --weights %s\n", weights.c_str()); return 1; }
+        ev.reset(new NTupleEval(net));
+    }
 
     std::vector<int64_t> scores(games);
     std::vector<int> lengths(games), top(games);
@@ -70,7 +86,7 @@ int main(int argc, char** argv) {
     auto worker = [&]() {
         std::unique_ptr<Agent> ag;
         if (agent == "random") ag.reset(new RandomAgent());
-        else if (agent == "expectimax") ag.reset(new ExpectimaxAgent(depth, R, H));
+        else if (agent == "expectimax" || agent == "ntuple") ag.reset(new ExpectimaxAgent(depth, R, *ev));
         else usage();
         Move ms[MAX_MOVES];
         for (int i; (i = next_game++) < games;) {
