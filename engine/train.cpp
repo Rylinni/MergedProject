@@ -9,6 +9,10 @@
 // return G (in units of SCALE points), so std(G) = sqrt(E[G^2] - V^2). With
 // --risk L the policy maximises points + V + L * std, i.e. it seeks variance;
 // both networks then learn the value of that risk-seeking policy.
+//
+// Largest-merge mode (--objective max): V(afterstate) = expected biggest single-move
+// score still to come. Moves maximise max(points, V), and the TD target is
+// max(points, V(next afterstate)) instead of points + V(next afterstate).
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -28,6 +32,7 @@ static void usage() {
         "usage: merged_train --out FILE [--in FILE] [--games N] [--threads T] [--alpha A]\n"
         "                    [--alpha-end A] [--report N] [--seed S] [--legacy]\n"
         "                    [--moments-in FILE] [--moments-out FILE] [--risk L]\n"
+        "                    [--objective sum|max]   (max = largest single merge)\n"
         "  alpha is the total step size (spread over all lookups); it decays\n"
         "  geometrically from --alpha to --alpha-end over the run.\n");
     std::exit(2);
@@ -36,6 +41,7 @@ static void usage() {
 int main(int argc, char** argv) {
     std::string out, in, mom_in, mom_out;
     double risk = 0;
+    bool max_obj = false;
     long games = 100000, report = 5000;
     int threads = std::max(1u, std::thread::hardware_concurrency());
     double alpha = 0.1, alpha_end = -1;
@@ -56,10 +62,12 @@ int main(int argc, char** argv) {
         else if (a == "--moments-in") mom_in = next();
         else if (a == "--moments-out") mom_out = next();
         else if (a == "--risk") risk = std::atof(next());
+        else if (a == "--objective") { std::string o = next(); if (o == "max") max_obj = true; else if (o != "sum") usage(); }
         else usage();
     }
     if (out.empty()) usage();
     if (alpha_end < 0) alpha_end = alpha;
+    if (max_obj && (risk != 0 || !mom_out.empty())) { std::fprintf(stderr, "--objective max does not combine with moments/risk\n"); return 2; }
     if (risk != 0 && mom_out.empty()) { std::fprintf(stderr, "--risk needs --moments-out\n"); return 2; }
 
     NTuple net;
@@ -73,7 +81,7 @@ int main(int argc, char** argv) {
 
     std::atomic<long> next_game{0};
     std::mutex mu;
-    double sum_score = 0, sum_moves = 0, best = 0, total_moves = 0;
+    double sum_score = 0, sum_moves = 0, best = 0, total_moves = 0, sum_big = 0, max_big = 0;
     long done = 0;
     auto t0 = std::chrono::steady_clock::now();
 
@@ -85,6 +93,7 @@ int main(int argc, char** argv) {
             Game g(R, seed + uint64_t(gi));
             Board prev{};
             bool have_prev = false;
+            int64_t game_big = 0;
             for (;;) {
                 int n = g.legal(ms);
                 if (n == 0) break;
@@ -95,12 +104,13 @@ int main(int argc, char** argv) {
                 for (int i = 0; i < n; i++) {
                     Board nb = g.b;
                     int64_t pts = apply(nb, g.next, ms[i], R);
-                    double v = double(pts) + (risk != 0 ? risk_eval(nb) : (nb.empty() ? net.value(nb) : 0.0));
+                    double fut = risk != 0 ? risk_eval(nb) : (nb.empty() ? net.value(nb) : 0.0);
+                    double v = max_obj ? std::max(double(pts), fut) : double(pts) + fut;
                     if (v > bv) { bv = v; bi = i; bafter = nb; bpts = pts; }
                 }
                 if (have_prev) {
                     double va = bafter.empty() ? net.value(bafter) : 0.0;
-                    double target = double(bpts) + va;
+                    double target = max_obj ? std::max(double(bpts), va) : double(bpts) + va;
                     net.update(prev, float(step * (target - net.value(prev))));
                     if (moments) {
                         double r = double(bpts) / RiskEval::SCALE, vs = va / RiskEval::SCALE;
@@ -108,6 +118,7 @@ int main(int argc, char** argv) {
                         mom.update(prev, float(step * (m2 - mom.value(prev))));
                     }
                 }
+                game_big = std::max(game_big, bpts);
                 g.play(ms[bi]);
                 prev = g.b;
                 have_prev = true;
@@ -119,16 +130,18 @@ int main(int argc, char** argv) {
 
             std::lock_guard<std::mutex> lk(mu);
             sum_score += double(g.score);
+            sum_big += double(game_big);
+            max_big = std::max(max_big, double(game_big));
             sum_moves += g.moves;
             total_moves += g.moves;
             best = std::max(best, double(g.score));
             if (++done % report == 0) {
                 double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
-                std::printf("games=%ld  mean=%.0f  max=%.0f  moves/game=%.0f  alpha=%.4f  %.0fs  (%.0f moves/s)\n",
-                            done, sum_score / report, best, sum_moves / report, step * net.lookups(), secs,
-                            total_moves / secs);
+                std::printf("games=%ld  mean=%.0f  max=%.0f  biggest-move mean=%.0f max=%.0f  moves/game=%.0f  alpha=%.4f  %.0fs  (%.0f moves/s)\n",
+                            done, sum_score / report, best, sum_big / report, max_big, sum_moves / report,
+                            step * net.lookups(), secs, total_moves / secs);
                 std::fflush(stdout);
-                sum_score = sum_moves = best = 0;
+                sum_score = sum_moves = best = sum_big = max_big = 0;
                 net.save(out);
                 if (moments) mom.save(mom_out);
             }

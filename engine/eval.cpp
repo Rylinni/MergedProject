@@ -23,6 +23,8 @@ static void usage() {
         "usage: merged_eval [--agent random|greedy|expectimax|ntuple] [--depth D] [--games N]\n"
         "                   [--weights FILE]   (n-tuple weights for --agent ntuple)\n"
         "                   [--moments FILE --risk L]  (top-score mode: maximise V + L*std)\n"
+        "                   [--objective sum|max]      (max: weights trained for the largest merge)\n"
+        "                   [--record-by score|merge]  (which game --record keeps)\n"
         "                   [--seed S] [--threads T] [--csv FILE] [--record FILE]\n"
         "  --record writes the best game's full move list as JSON\n"
         "                   [--w-empty X] [--w-pair X]\n"
@@ -34,6 +36,7 @@ static void usage() {
 int main(int argc, char** argv) {
     std::string agent = "greedy", csv, weights, moments, record;
     double risk = 0;
+    bool max_obj = false, record_by_merge = false;
     int depth = 1, games = 1000, threads = std::max(1u, std::thread::hardware_concurrency());
     uint64_t seed = 1;
     Rules R;
@@ -51,6 +54,8 @@ int main(int argc, char** argv) {
         else if (a == "--weights") weights = next();
         else if (a == "--moments") moments = next();
         else if (a == "--risk") risk = std::atof(next());
+        else if (a == "--objective") { std::string o = next(); if (o == "max") max_obj = true; else if (o != "sum") usage(); }
+        else if (a == "--record-by") { std::string o = next(); if (o == "merge") record_by_merge = true; else if (o != "score") usage(); }
         else if (a == "--w-empty") H.w_empty = std::atof(next());
         else if (a == "--w-pair") H.w_pair = std::atof(next());
         else if (a == "--legacy-scoring") { R.bank_smaller_half = false; R.explosion_scores_cleared = false; }
@@ -89,7 +94,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::vector<int64_t> scores(games);
+    std::vector<int64_t> scores(games), bigs(games, 0);
     // Per-game move log (only with --record): piece values, cells, points.
     struct Rec { uint8_t v0, v1, a, b; int64_t pts; };
     std::vector<std::vector<Rec>> logs(record.empty() ? 0 : games);
@@ -99,7 +104,7 @@ int main(int argc, char** argv) {
     auto worker = [&]() {
         std::unique_ptr<Agent> ag;
         if (agent == "random") ag.reset(new RandomAgent());
-        else if (agent == "expectimax" || agent == "ntuple") ag.reset(new ExpectimaxAgent(depth, R, *ev));
+        else if (agent == "expectimax" || agent == "ntuple") ag.reset(new ExpectimaxAgent(depth, R, *ev, max_obj));
         else usage();
         Move ms[MAX_MOVES];
         for (int i; (i = next_game++) < games;) {
@@ -109,6 +114,7 @@ int main(int argc, char** argv) {
                 Move mv = ag->choose(g, arng);
                 Piece p = g.next;
                 int64_t pts = g.play(mv);
+                bigs[i] = std::max(bigs[i], pts);
                 if (!record.empty()) logs[i].push_back({p.v[0], uint8_t(p.n == 2 ? p.v[1] : 0), mv.a, mv.b, pts});
             }
             scores[i] = g.score; lengths[i] = g.moves;
@@ -137,6 +143,16 @@ int main(int argc, char** argv) {
                 std::sqrt(var / games), (long long)pct(0.5), (long long)pct(0.9), (long long)pct(0.99),
                 (long long)s.back());
     int best_i = int(std::max_element(scores.begin(), scores.end()) - scores.begin());
+    int big_i = int(std::max_element(bigs.begin(), bigs.end()) - bigs.begin());
+    {
+        double mb = 0;
+        std::vector<int64_t> sb = bigs;
+        std::sort(sb.begin(), sb.end());
+        for (auto x : bigs) mb += double(x);
+        std::printf("biggest single move per game: mean=%.0f  median=%lld  max=%lld (seed %llu)\n", mb / games,
+                    (long long)sb[sb.size() / 2], (long long)sb.back(), (unsigned long long)(seed + big_i));
+    }
+    if (record_by_merge) best_i = big_i;
     std::printf("best game: seed=%llu score=%lld moves=%d  (rerun with --seed %llu --games 1 --threads 1)\n",
                 (unsigned long long)(seed + best_i), (long long)scores[best_i], lengths[best_i],
                 (unsigned long long)(seed + best_i));
