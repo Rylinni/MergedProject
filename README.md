@@ -21,3 +21,5 @@ Scoring:
 playMerged file:
 * play merged starts a game and gives a list of all the possible moves to play. Denoted by the values of the blocks in the first part and the coordinates of the blocks in the second part
 * Ex: ([1, 2], [(4,2), (4, 3)] -- This move puts a 1 value block in position 4, 2 which is the fifth row and the third column and a puts its partner 2 value block in position 4, 3 which is the fifth row and the fourth column.
+
+Fast engine (C++), evaluation harness and baselines: see [engine/README.md](engine/README.md).
