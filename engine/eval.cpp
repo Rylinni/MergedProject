@@ -23,7 +23,7 @@ static void usage() {
         "usage: merged_eval [--agent random|greedy|expectimax] [--depth D] [--games N]\n"
         "                   [--seed S] [--threads T] [--csv FILE]\n"
         "                   [--w-empty X] [--w-pair X]\n"
-        "  rules: [--p-double P] [--double-anywhere] [--double-same-ok]\n"
+        "  rules: [--legacy-scoring] [--p-double P] [--double-anywhere] [--double-same-ok]\n"
         "         [--max-spawn V] [--weights w1,w2,...,w7]\n");
     std::exit(2);
 }
@@ -45,6 +45,7 @@ int main(int argc, char** argv) {
         else if (a == "--csv") csv = next();
         else if (a == "--w-empty") H.w_empty = std::atof(next());
         else if (a == "--w-pair") H.w_pair = std::atof(next());
+        else if (a == "--legacy-scoring") { R.bank_smaller_half = false; R.explosion_scores_cleared = false; }
         else if (a == "--p-double") R.p_double = std::atof(next());
         else if (a == "--double-anywhere") R.double_room_interior_only = false;
         else if (a == "--double-same-ok") R.double_distinct = false;

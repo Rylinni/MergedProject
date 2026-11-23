@@ -16,7 +16,7 @@ def _load():
     lib = ctypes.CDLL(_LIB_PATH)
     u8p = ctypes.POINTER(ctypes.c_uint8)
     lib.mg_apply.restype = ctypes.c_longlong
-    lib.mg_apply.argtypes = [u8p, ctypes.c_uint8, ctypes.c_int, u8p, u8p, u8p, u8p]
+    lib.mg_apply.argtypes = [u8p, ctypes.c_uint8, ctypes.c_int, u8p, u8p, u8p, u8p, ctypes.c_int]
     lib.mg_legal.restype = ctypes.c_int
     lib.mg_legal.argtypes = [u8p, ctypes.c_int, u8p, u8p]
     lib.mg_room_for_double.restype = ctypes.c_int
@@ -47,14 +47,18 @@ def _unlock_set(mask):
     return {v for v in range(8) if mask >> v & 1}
 
 
-def apply(board, unlocks, values, coords):
-    """Place piece `values` at (row, col) `coords`; return (board, unlocks, points)."""
+def apply(board, unlocks, values, coords, rules="ios"):
+    """Place piece `values` at (row, col) `coords`; return (board, unlocks, points).
+
+    rules="ios" uses the scoring seen in the real game; "legacy" matches mergedMain.py.
+    """
+    assert rules in ("ios", "legacy")
     n = len(values)
     out = (ctypes.c_uint8 * 25)()
     unl = ctypes.c_uint8()
     pts = _lib.mg_apply(_cells(board), _unlock_mask(unlocks), n, (ctypes.c_uint8 * 2)(*values, *([0] * (2 - n))),
                         (ctypes.c_uint8 * 2)(*[x * 5 + y for x, y in coords], *([0] * (2 - n))),
-                        out, ctypes.byref(unl))
+                        out, ctypes.byref(unl), int(rules == "legacy"))
     return [list(out[r * 5:(r + 1) * 5]) for r in range(5)], _unlock_set(unl.value), pts
 
 

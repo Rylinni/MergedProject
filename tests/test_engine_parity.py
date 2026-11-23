@@ -35,7 +35,7 @@ def check(board, unlocks, piece):
     assert moves == merged_fast.legal_moves(board, piece), (board, piece)
     for coords in random.sample(sorted(moves), min(4, len(moves))):
         want = py_apply(board, unlocks, (list(piece), list(coords)))
-        got = merged_fast.apply(board, unlocks, list(piece), list(coords))
+        got = merged_fast.apply(board, unlocks, list(piece), list(coords), rules="legacy")
         assert got == want, (board, unlocks, piece, coords, got, want)
 
 
@@ -50,7 +50,7 @@ def test_unit_cases_from_test_merge():
     for board, (vals, coords), score in cases:
         for (x, y) in coords:
             board[x][y] = 0
-        _, _, pts = merged_fast.apply(board, {1, 2}, vals, coords)
+        _, _, pts = merged_fast.apply(board, {1, 2}, vals, coords, rules="legacy")
         assert pts == score
         assert py_apply(board, [1, 2], (vals, coords))[2] == score
 

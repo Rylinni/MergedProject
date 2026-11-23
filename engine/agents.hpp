@@ -61,7 +61,7 @@ struct ExpectimaxAgent : Agent {
             double best = 0;  // no legal move => game over, no more points
             for (int i = 0; i < n; i++) {
                 Board nb = b;
-                double v = double(apply(nb, pp[k].p, ms[i])) + after_value(nb, d - 1);
+                double v = double(apply(nb, pp[k].p, ms[i], R)) + after_value(nb, d - 1);
                 if (i == 0 || v > best) best = v;
             }
             ev += pp[k].prob * best;
@@ -77,7 +77,7 @@ struct ExpectimaxAgent : Agent {
         int ties = 0;
         for (int i = 0; i < n; i++) {
             Board nb = g.b;
-            double v = double(apply(nb, g.next, ms[i])) + after_value(nb, depth - 1);
+            double v = double(apply(nb, g.next, ms[i], R)) + after_value(nb, depth - 1);
             if (v > best + 1e-9) { best = v; bm = ms[i]; ties = 1; }
             else if (v > best - 1e-9 && rng.below(++ties) == 0) bm = ms[i];  // random tie-break
         }

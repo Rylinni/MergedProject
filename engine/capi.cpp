@@ -15,13 +15,14 @@ extern "C" {
 
 // Place a piece (n = 1 or 2 values at cell indices pos[]) and resolve merges.
 // Returns points scored; writes the new board and unlocked bitmask.
+// legacy != 0 uses mergedMain.py scoring, otherwise the iOS-observed rules.
 long long mg_apply(const uint8_t* cells, uint8_t unlocked, int n, const uint8_t* vals, const uint8_t* pos,
-                   uint8_t* cells_out, uint8_t* unlocked_out) {
+                   uint8_t* cells_out, uint8_t* unlocked_out, int legacy) {
     Board b;
     for (int i = 0; i < CELLS; i++) b.c[i] = cells[i];
     b.unlocked = unlocked;
-    Move mv{pos[0], n == 2 ? pos[1] : NONE};
-    long long pts = apply(b, make_piece(n, vals), mv);
+    Move mv{pos[0], n == 2 ? pos[1] : uint8_t(0)};  // b unused for singles
+    long long pts = apply(b, make_piece(n, vals), mv, legacy ? Rules::legacy() : Rules());
     for (int i = 0; i < CELLS; i++) cells_out[i] = b.c[i];
     *unlocked_out = b.unlocked;
     return pts;

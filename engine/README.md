@@ -26,31 +26,40 @@ engine/build/merged_eval --agent expectimax --depth 2 --games 200 --csv scores.c
 Game `i` uses seed `seed + i`, so runs are reproducible. The output gives mean ± standard
 error, median, p90, p99, max, moves per game, and the highest value unlocked.
 
-## Results (mergedMain rules, seed 1)
+## Results (iOS rules, seed 1)
 
 | Agent | Games | Mean ± s.e. | Median | Max |
 |---|---|---|---|---|
-| Random | 200k | 82 ± 0.1 | 71 | 1,197 |
-| Old sklearn MLP (`nnai.sav`, Python) | 200 | 476 ± 23 | 392 | 2,862 |
-| Greedy: points + 10·empty + 3·v·(equal pairs) | 20k | 2,693 ± 18 | 1,913 | 22,684 |
-| Expectimax depth 2, same heuristic | 200 | 37,374 ± 2,752 | 24,698 | 225,472 |
+| Random | 200k | 84 ± 0.1 | 72 | 1,197 |
+| Old sklearn MLP (`nnai.sav`, Python, mergedMain rules) | 200 | 476 ± 23 | 392 | 2,862 |
+| Greedy: points + 10·empty + 3·v·(equal pairs) | 20k | 3,076 ± 21 | 2,156 | 32,792 |
+| Expectimax depth 2, same heuristic | 200 | 44,281 ± 3,010 | 30,916 | 211,133 |
 
-## Rules we are not sure match iOS
+## Rules: what is confirmed and what is not
 
-These are fields of `merged::Rules` (and flags of `merged_eval`). The defaults reproduce
-`mergedMain.py`. **They change scores more than any choice of model**, so pin them down
-from the real game before training seriously. Greedy-agent mean, 20k games each:
+`merged::Rules` defaults follow screen recordings of the iOS game, and
+`tests/test_ios_observations.py` replays the transcribed moves. `Rules::legacy()`
+(`--legacy-scoring`) reproduces `mergedMain.py`, which the parity test uses.
 
-| Setting | Default (mergedMain) | Alternative | Greedy mean |
+Confirmed from recordings (all matched exactly, including board after the move):
+- 3+ orthogonally connected equal tiles merge onto the placed cell; points = sum of merged values.
+- Chains multiply everything scored in the move by 1·2·3·… (one factor per merge step):
+  a partner chain of 2's→3, joining the domino's 3→4→5 scored (6+9+12)×6 = 162.
+- **Changed from mergedMain:** if a domino's two halves merge in separate groups, both
+  score (6 + 12 = 18; mergedMain kept only the 12).
+- **Changed from mergedMain:** three M's explode the 3×3 around the placed M, and the
+  destroyed tiles score their values (21 + 10 = 31; mergedMain gave 21).
+- M's spawn as pieces once unlocked, including in dominoes ([M,3], [4,M]).
+- Roughly half of pieces are dominoes (12 of 23 seen); every domino seen had two different values.
+
+Still unconfirmed. Greedy-agent mean, 20k games each:
+
+| Setting | Current default | Alternative | Greedy mean |
 |---|---|---|---|
-| Do M's spawn once unlocked? | yes (`--max-spawn 7`) | never (`--max-spawn 6`) | 2,693 → 558 |
-| Spawn weight per value | uniform over unlocked | e.g. `--weights 4,4,2,2,1,1,1` | 2,693 → 862 |
-| Chance a piece is a domino | 0.5 | `--p-double 0.3` | 2,693 → 6,188 |
-| Room for a domino | interior cells only (looks like a bug) | anywhere (`--double-anywhere`) | 2,693 → 2,068 |
-| Domino halves | always different values | may match (`--double-same-ok`) | — |
-| Scoring | sum of merged values × (1·2·3·…) per chain; partner-merge caveat | ? | — |
-| Opening | fully random from {1,2} | reviews mention a gentler ramp | — |
+| Spawn weight per value | uniform over unlocked | `--weights 4,4,2,2,1,1,1` | 3,076 → 914 |
+| Room for a domino | interior cells only (mergedMain quirk) | anywhere (`--double-anywhere`) | 3,076 → 2,322 |
+| Exact domino chance | 0.5 | `--p-double P` | very sensitive |
+| Opening pieces | fully random | reviews mention a gentler ramp | small |
 
-Public sources (launch-era reviews and guides) confirm merges of 3+ orthogonal neighbours
-landing on the placed tile, rotatable dominoes, M from three 6's, and three M's clearing a 3×3
-area. They do not give spawn rates, M spawning, or the combo formula.
+The 16 pieces seen with M unlocked were spread roughly evenly (1:1, 2:1, 3:3, 4:3, 5:2, 6:4, M:2),
+which fits uniform weights better than a low-value bias, but the sample is small.

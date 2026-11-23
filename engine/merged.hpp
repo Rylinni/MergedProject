@@ -38,14 +38,27 @@ struct Tables {
 };
 inline const Tables T;
 
-// Everything about the iOS game we are not yet sure of. Defaults reproduce
-// mergedMain.py exactly.
+// Rules that differ between mergedMain.py and the iOS game, or that are still
+// unconfirmed. Defaults follow what screen recordings of the iOS game showed
+// (see tests/test_ios_observations.py); Rules::legacy() reproduces mergedMain.py.
 struct Rules {
+    // Scoring, confirmed from recordings:
+    bool bank_smaller_half = true;       // domino whose halves merge separately: both score
+                                         // (mergedMain discarded the smaller half's points)
+    bool explosion_scores_cleared = true;  // tiles destroyed by an M explosion score their value
+    // Spawning (M spawning and ~50% dominoes are consistent with recordings; the rest unconfirmed):
     double p_double = 0.5;               // chance the next piece is a domino (if there is room)
     bool double_room_interior_only = true;  // mergedMain quirk: only interior cells are checked for domino room
     bool double_distinct = true;         // mergedMain: domino halves always differ
     int max_spawn = M;                   // highest value that can spawn (once unlocked); 6 = M never spawns
     double weight[EXPLODE] = {0, 1, 1, 1, 1, 1, 1, 1};  // relative spawn weight per value
+
+    static Rules legacy() {
+        Rules r;
+        r.bank_smaller_half = false;
+        r.explosion_scores_cleared = false;
+        return r;
+    }
 };
 
 struct Piece {
@@ -91,16 +104,21 @@ inline uint32_t flood(const Board& b, int value, int start, int exclude) {
 
 struct Resolver {
     Board& b;
+    const Rules& R;
     int64_t withheld = 0, mult = 1;
     int merges = 0;
-    explicit Resolver(Board& bd) : b(bd) {}
+    Resolver(Board& bd, const Rules& r) : b(bd), R(r) {}
 
     void upgrade(int p) {
         b.c[p]++;
         merges++;
         mult *= merges;
         if (b.c[p] == EXPLODE) {
-            for (uint32_t m = T.box[p]; m; m &= m - 1) b.c[__builtin_ctz(m)] = 0;
+            for (uint32_t m = T.box[p]; m; m &= m - 1) {
+                int i = __builtin_ctz(m);
+                if (R.explosion_scores_cleared && i != p) withheld += b.c[i];
+                b.c[i] = 0;
+            }
         } else {
             b.unlocked |= 1 << b.c[p];
         }
@@ -124,8 +142,9 @@ struct Resolver {
 
 // Place `p` with `mv` on `b` (cells must be empty) and resolve merges.
 // Returns points scored. Mirrors playMove + evalBoard.
-inline int64_t apply(Board& b, const Piece& p, Move mv) {
-    Resolver r(b);
+inline int64_t apply(Board& b, const Piece& p, Move mv, const Rules& R) {
+    Resolver r(b, R);
+    int64_t banked = 0;
     if (p.n == 1) {
         b.c[mv.a] = p.v[0];
         int v = p.v[0];
@@ -140,14 +159,17 @@ inline int64_t apply(Board& b, const Piece& p, Move mv) {
         int v = sv;
         bool up = r.eval_piece(v, sc, -1, 0, false);
         while (up) { v++; up = r.eval_piece(v, sc, bc, bv, true); }
-        if (bigger_can_eval) { r.withheld = 0; r.mult = 1; r.merges = 0; }
+        if (bigger_can_eval) {
+            if (R.bank_smaller_half) banked = r.mult * r.withheld;
+            r.withheld = 0; r.mult = 1; r.merges = 0;
+        }
         if (b.c[bc] == bv) {
             v = bv;
             up = r.eval_piece(v, bc, sc, sv, false);
             while (up) { v++; up = r.eval_piece(v, bc, sc, sv, false); }
         }
     }
-    return r.mult * r.withheld;
+    return banked + r.mult * r.withheld;
 }
 
 inline bool room_for_double(const Board& b, const Rules& R) {
@@ -276,7 +298,7 @@ struct Game {
     }
     int legal(Move* out) const { return legal_moves(b, next, out); }
     int64_t play(Move mv) {
-        int64_t pts = apply(b, next, mv);
+        int64_t pts = apply(b, next, mv, R);
         score += pts;
         moves++;
         next = spawn(b, R, rng);
