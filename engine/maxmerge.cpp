@@ -65,6 +65,9 @@ int main(int argc, char** argv) {
     long steps = argc > 1 ? std::atol(argv[1]) : 2000000;
     int restarts = argc > 2 ? std::atoi(argv[2]) : 8;
     uint64_t seed = argc > 3 ? std::strtoull(argv[3], nullptr, 10) : 1;
+    // Optional tie-breaker: bonus per empty cell (keep it < 720/25 so points always come first).
+    double empty_bonus = argc > 4 ? std::atof(argv[4]) : 0;
+    auto score = [&](const Board& b, const Best& m) { return double(m.pts) + empty_bonus * popcount(b.empty()); };
     Rules R;
     Rng rng(seed);
     Board global{};
@@ -84,16 +87,16 @@ int main(int argc, char** argv) {
             if (!stable(nb)) continue;
             Best nbm = best_move(nb, R);
             if (nbm.pts < 0) continue;
-            double d = double(nbm.pts - cur.pts);
+            double d = score(nb, nbm) - score(b, cur);
             if (d >= 0 || rng.uniform() < std::exp(d / T)) {
                 b = nb;
                 cur = nbm;
-                if (cur.pts > bb.pts) { bb = cur; bestb = b; }
+                if (score(b, cur) > score(bestb, bb)) { bb = cur; bestb = b; }
             }
         }
-        std::printf("restart %d: best %lld\n", r, (long long)bb.pts);
+        std::printf("restart %d: best %lld with %d empty cells\n", r, (long long)bb.pts, popcount(bestb.empty()));
         std::fflush(stdout);
-        if (bb.pts > gbest.pts) { gbest = bb; global = bestb; }
+        if (score(bestb, bb) > (gbest.pts < 0 ? -1e18 : score(global, gbest))) { gbest = bb; global = bestb; }
     }
     Board after = global;
     apply(after, gbest.p, gbest.m, R);
