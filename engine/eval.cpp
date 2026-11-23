@@ -22,6 +22,7 @@ static void usage() {
     std::fprintf(stderr,
         "usage: merged_eval [--agent random|greedy|expectimax|ntuple] [--depth D] [--games N]\n"
         "                   [--weights FILE]   (n-tuple weights for --agent ntuple)\n"
+        "                   [--moments FILE --risk L]  (top-score mode: maximise V + L*std)\n"
         "                   [--seed S] [--threads T] [--csv FILE]\n"
         "                   [--w-empty X] [--w-pair X]\n"
         "  rules: [--legacy-scoring] [--p-double P] [--double-anywhere] [--double-same-ok]\n"
@@ -30,7 +31,8 @@ static void usage() {
 }
 
 int main(int argc, char** argv) {
-    std::string agent = "greedy", csv, weights;
+    std::string agent = "greedy", csv, weights, moments;
+    double risk = 0;
     int depth = 1, games = 1000, threads = std::max(1u, std::thread::hardware_concurrency());
     uint64_t seed = 1;
     Rules R;
@@ -45,6 +47,8 @@ int main(int argc, char** argv) {
         else if (a == "--threads") threads = std::atoi(next());
         else if (a == "--csv") csv = next();
         else if (a == "--weights") weights = next();
+        else if (a == "--moments") moments = next();
+        else if (a == "--risk") risk = std::atof(next());
         else if (a == "--w-empty") H.w_empty = std::atof(next());
         else if (a == "--w-pair") H.w_pair = std::atof(next());
         else if (a == "--legacy-scoring") { R.bank_smaller_half = false; R.explosion_scores_cleared = false; }
@@ -72,11 +76,15 @@ int main(int argc, char** argv) {
         } else usage();
     }
     if (agent == "greedy") { agent = "expectimax"; depth = 1; }
-    NTuple net;
+    NTuple net, mom;
     std::unique_ptr<Evaluator> ev(new Heuristic(H));
     if (agent == "ntuple") {
         if (weights.empty() || !net.load(weights)) { std::fprintf(stderr, "cannot load --weights %s\n", weights.c_str()); return 1; }
         ev.reset(new NTupleEval(net));
+        if (!moments.empty()) {
+            if (!mom.load(moments)) { std::fprintf(stderr, "cannot load --moments %s\n", moments.c_str()); return 1; }
+            ev.reset(new RiskEval(net, mom, risk));
+        }
     }
 
     std::vector<int64_t> scores(games);
@@ -118,6 +126,10 @@ int main(int argc, char** argv) {
     std::printf("mean=%.1f  sem=%.1f  median=%lld  p90=%lld  p99=%lld  max=%lld\n", mean,
                 std::sqrt(var / games), (long long)pct(0.5), (long long)pct(0.9), (long long)pct(0.99),
                 (long long)s.back());
+    int best_i = int(std::max_element(scores.begin(), scores.end()) - scores.begin());
+    std::printf("best game: seed=%llu score=%lld moves=%d  (rerun with --seed %llu --games 1 --threads 1)\n",
+                (unsigned long long)(seed + best_i), (long long)scores[best_i], lengths[best_i],
+                (unsigned long long)(seed + best_i));
     std::printf("moves/game=%.1f  highest unlocked:", len / games);
     for (int v = 2; v <= M; v++) std::printf(" %d:%.1f%%", v, 100.0 * reach[v] / games);
     std::printf("\ntime=%.1fs  (%.2f games/s, %d threads)\n", secs, games / secs, threads);

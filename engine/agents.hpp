@@ -1,5 +1,6 @@
 // Baseline agents for the fast engine.
 #pragma once
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -38,6 +39,24 @@ struct NTupleEval : Evaluator {
     const NTuple& net;
     explicit NTupleEval(const NTuple& n) : net(n) {}
     double operator()(const Board& b) const override { return b.empty() ? net.value(b) : 0.0; }
+};
+
+// Risk-seeking evaluator for top scores: V + lambda * std of future points,
+// with std from a second network trained on E[(G / SCALE)^2].
+struct RiskEval : Evaluator {
+    static constexpr double SCALE = 1000.0;
+    const NTuple& net;
+    const NTuple& moments;
+    double lambda;
+    RiskEval(const NTuple& v, const NTuple& m, double l) : net(v), moments(m), lambda(l) {}
+    double std_dev(const Board& b) const {
+        double v = net.value(b) / SCALE, m2 = moments.value(b);
+        return std::sqrt(std::max(0.0, m2 - v * v)) * SCALE;
+    }
+    double operator()(const Board& b) const override {
+        if (!b.empty()) return 0.0;
+        return net.value(b) + (lambda != 0 ? lambda * std_dev(b) : 0.0);
+    }
 };
 
 struct Agent {

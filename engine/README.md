@@ -31,6 +31,29 @@ the position right after a move. `train.cpp` learns it by self-play with TD(0): 
 position's value moves towards (next move's points + next position's value). It uses all
 cores, saves a checkpoint every `--report` games, and `--in` resumes from a checkpoint.
 
+## Top-score mode
+
+The goal is the best single game rather than the best average. `merged_train --moments-out M.bin`
+trains a second network on E[G²] of the future score, which gives its spread
+(std = √(E[G²] − V²)). `merged_eval --moments M.bin --risk λ` then picks moves by V + λ·std.
+
+Measured (500 games each, same seeds, 1-step search, network after ~1.2M training games):
+
+| λ | Mean | p99 | Max |
+|---|---|---|---|
+| −0.15 | 9,644 | 43,464 | 61,011 |
+| −0.05 | 16,446 | 81,605 | 99,127 |
+| **0** | **17,626** | **82,892** | **122,601** |
+| 0.05 | 18,989 | 88,420 | 125,371 |
+| 0.25 | 13,254 | 68,385 | 83,224 |
+| 0.5 | 2,667 | 14,758 | 20,613 |
+
+Seeking variance does not raise the top score. The spread is largest in near-death
+positions, and in this game big scores come from surviving longer, so the mean-optimal
+policy is also (within noise) the top-score policy. **For a record game, use the mean
+model with the deepest affordable search and run many games:** the best of N grows with
+N. `merged_eval` prints the seed of the best game so it can be replayed exactly.
+
 ## Evaluate an agent
 
 ```bash
