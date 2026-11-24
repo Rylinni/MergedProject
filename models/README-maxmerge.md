@@ -97,6 +97,11 @@ network under-values many early boards. With a margin (reset only if better by 0
 3.3 times per success at stage 1, mostly a few moves before a game over, with no speed-up (695 vs
 705 turns). The coach uses margin 0.15.
 
+**Stage 3 (target: max-ready) failed.** After 150 episodes the policy collapsed: 290,152 turns and
+848 games per success during training, and 38 of 40 evaluation episodes hit the 300,000-turn cap
+(stage 2: 40 of 40 reached, median 34,352). With successes this rare, TD learns mostly "the future is
+worth ~0" and erodes the inherited survival skill. The stage-2 checkpoint remains the model.
+
 **What would help next.** Steer towards max boards whose free cells form one block, so the setup can
 be held for longer, and train stage 3 (target: max-ready) with checkpoints chosen on held-out episodes.
 
