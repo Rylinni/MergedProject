@@ -5,14 +5,15 @@ usage: python3 coach/build.py
 import os
 
 here = os.path.dirname(os.path.abspath(__file__))
-parts = [("engine", "../replay/engine.js"), ("png", "png.js"), ("reader", "reader.js"), ("model", "model.js")]
+parts = [("engine", "../replay/engine.js"), ("png", "png.js"), ("reader", "reader.js"), ("model", "model.js"),
+         ("maxboard", "maxboard.js")]
 out = [
     "// Variables used by Scriptable.",
     "// These must be at the very top of the file. Do not edit.",
     "// icon-color: deep-blue; icon-glyph: chess-board;",
     "// Merge Coach: reads a screenshot of the merge game and suggests the best move.",
     "// Built by coach/build.py from replay/engine.js, coach/png.js, coach/reader.js,",
-    "// coach/model.js and coach/scriptable_main.js. Edit those, not this file.",
+    "// coach/model.js, coach/maxboard.js and coach/scriptable_main.js. Edit those, not this file.",
     "",
     "const MC = {};",
 ]

@@ -3,7 +3,7 @@
 // icon-color: deep-blue; icon-glyph: chess-board;
 // Merge Coach: reads a screenshot of the merge game and suggests the best move.
 // Built by coach/build.py from replay/engine.js, coach/png.js, coach/reader.js,
-// coach/model.js and coach/scriptable_main.js. Edit those, not this file.
+// coach/model.js, coach/maxboard.js and coach/scriptable_main.js. Edit those, not this file.
 
 const MC = {};
 // ---- engine ----
@@ -588,9 +588,121 @@ const MC = {};
     return m;
   }
 
-  const api = { loadWeights, value, bestMove, guessUnlocked, pieceDistribution };
+  // "Largest merge, fewest turns" objective (engine/goal.cpp --target max): the value of
+  // an afterstate is U = beta * progress^power + V (V = this network); a full board
+  // means game over, worth the same as a fresh game. A move scoring 70,560 is worth 1,
+  // any other move gamma * U(after). Advise a reset when a fresh game beats the best
+  // move by more than margin. Needs MergeMaxBoard (coach/maxboard.js).
+  function bestMoveGoal(W, MB, board, piece, unlocked, o) {
+    const opt = Object.assign({ beta: 0.4, power: 8, gamma: 0.9995, margin: 0.15 }, o || {});
+    const c = Uint8Array.from(board);
+    const uFresh = value(W, new Uint8Array(25));
+    // Hold rule: on a max-ready board keep it ready (or score the max) whenever possible.
+    const cand = [];
+    for (const [a, b] of E.legalMoves(c, piece)) {
+      const nb = Uint8Array.from(c);
+      const r = E.apply(nb, piece, a, b, unlocked);
+      cand.push({ a, b, nb, r });
+    }
+    let holding = MB.ready(board);
+    if (holding) {
+      for (const x of cand) x.keeps = x.r.points >= 70560 || MB.ready(x.nb);
+      holding = cand.some((x) => x.keeps);
+    }
+    let best = null;
+    for (const { a, b, nb, r, keeps } of cand) {
+      if (holding && !keeps) continue;
+      let q;
+      if (r.points >= 70560) q = 1;
+      else {
+        let empty = false;
+        for (let i = 0; i < 25; i++) if (!nb[i]) { empty = true; break; }
+        const u = empty ? opt.beta * Math.pow(MB.progress(nb), opt.power) + value(W, nb) : uFresh;
+        q = opt.gamma * u;
+      }
+      if (!best || q > best.q) best = { vals: piece, a, b, points: r.points, chain: r.chain, q, after: Array.from(nb) };
+    }
+    const inGame = board.some((v) => v !== 0);
+    const progressNow = MB.progress(board);
+    if (!best) return { reset: true, reason: "no room", progress: progressNow };
+    if (inGame && uFresh > best.q + opt.margin) return { reset: true, reason: "fresh game is better", progress: progressNow, move: best };
+    return Object.assign({ reset: false, progress: progressNow, ready: MB.ready(best.after) }, best);
+  }
+
+  const api = { loadWeights, value, bestMove, bestMoveGoal, guessUnlocked, pieceDistribution };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.MergeModel = api;
+})(this);
+
+}).call(MC, undefined, undefined);
+// ---- maxboard ----
+(function (module, require) {
+// Max-board progress and readiness: a JS port of engine/maxboard.hpp.
+// A max board allows the largest possible move, 70,560 (see models/README-maxmerge.md).
+(function (root) {
+  const E = (typeof module !== "undefined" && module.exports) ? require("../replay/engine.js") : root.MergeEngine;
+  const N = 5, M = 7;
+
+  function makeLayouts() {
+    const out = [];
+    const inner = (r, c) => r >= 1 && r <= 3 && c >= 1 && c <= 3;
+    const dr = [-1, 1, 0, 0], dc = [0, 0, -1, 1];
+    const perms = [[2, 3, 4], [2, 4, 3], [3, 2, 4], [3, 4, 2], [4, 2, 3], [4, 3, 2]];
+    for (let sr = 1; sr <= 3; sr++) for (let sc = 1; sc <= 3; sc++) for (let d = 0; d < 4; d++) {
+      const fr = sr + dr[d], fc = sc + dc[d];
+      if (!inner(fr, fc)) continue;
+      const pr = dc[d], pc = dr[d];
+      const S = sr * N + sc, F = fr * N + fc;
+      const sN = [(sr - dr[d]) * N + (sc - dc[d]), (sr + pr) * N + (sc + pc), (sr - pr) * N + (sc - pc)];
+      const far = (fr + dr[d]) * N + (fc + dc[d]);
+      const fL = (fr + pr) * N + (fc + pc), fR = (fr - pr) * N + (fc - pc);
+      const dL = (fr + dr[d] + pr) * N + (fc + dc[d] + pc), dR = (fr + dr[d] - pr) * N + (fc + dc[d] - pc);
+      for (const pm of perms) for (let side = 0; side < 2; side++) {
+        const six = side ? fL : fR, em = side ? fR : fL, dSix = side ? dL : dR, dEm = side ? dR : dL;
+        const cell = [sN[0], sN[1], sN[2], far, six, em, dSix, dEm];
+        const value = [pm[0], pm[1], pm[2], 5, 6, M, M, 6];
+        let core = (1 << S) | (1 << F);
+        for (const c of cell) core |= 1 << c;
+        out.push({ S, F, cell, value, core });
+      }
+    }
+    return out;
+  }
+  const LAYOUTS = makeLayouts();
+  const K_MAX = (2 + 3 + 4 + 5 + 6 + 7 + 7 + 6) + 6 * 2;
+
+  // Progress towards any max board, in [0, 1] (same scoring as max_progress in C++).
+  function progress(board) {
+    let best = 0;
+    for (const m of LAYOUTS) {
+      let s = 0;
+      if (board[m.S]) s -= 8;
+      if (board[m.F]) s -= 8;
+      for (let k = 0; k < 8; k++) {
+        const v = board[m.cell[k]], want = m.value[k];
+        if (v === want) {
+          s += want;
+          if (k < 6) for (const q of E.NB[m.cell[k]]) if (!(m.core >> q & 1) && board[q] === want) { s += 2; break; }
+        } else if (v) s -= want;
+      }
+      if (s > best) best = s;
+    }
+    return best / K_MAX;
+  }
+
+  // True if a 2+4 domino placed now scores 70,560.
+  function ready(board) {
+    const c = Uint8Array.from(board);
+    for (const [a, b] of E.legalMoves(c, [2, 4])) {
+      const nb = Uint8Array.from(c);
+      if (E.apply(nb, [2, 4], a, b, 254).points >= 70560) return true;
+    }
+    return false;
+  }
+
+  const api = { progress, ready, LAYOUTS };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.MergeMaxBoard = api;
 })(this);
 
 }).call(MC, undefined, undefined);
@@ -602,9 +714,16 @@ const MC = {};
 // notification with the best move. Run inside Scriptable to check your latest screenshot.
 
 const SETTINGS = {
+  // "score": best total score (merge-coach-weights.bin).
+  // "maxmerge": reach the largest possible move, 70,560, in as few turns as possible
+  //             (merge-coach-maxmerge.bin); may advise starting a new game.
+  objective: "score",
   weightsFile: "merge-coach-weights.bin",
-  depth: 2,          // 1 = fast, 2 = stronger (falls back to 1 if it takes longer than budgetMs)
+  maxmergeWeightsFile: "merge-coach-maxmerge.bin",
+  depth: 2,          // score mode: 1 = fast, 2 = stronger (falls back to 1 after budgetMs)
   budgetMs: 3000,
+  // maxmerge mode: must match how the weights were trained (engine/goal.cpp)
+  maxmerge: { beta: 0.4, power: 8, gamma: 0.9995, margin: 0.15 },
 };
 
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -627,10 +746,10 @@ function base64ToBytes(s) {
   return out.subarray(0, o);
 }
 
-async function loadWeights() {
+async function loadWeights(name) {
   for (const fm of [FileManager.iCloud(), FileManager.local()]) {
     let path;
-    try { path = fm.joinPath(fm.documentsDirectory(), SETTINGS.weightsFile); } catch (e) { continue; }
+    try { path = fm.joinPath(fm.documentsDirectory(), name); } catch (e) { continue; }
     if (!fm.fileExists(path)) continue;
     if (fm.isFileStoredIniCloud && fm.isFileStoredIniCloud(path) && !fm.isFileDownloaded(path)) await fm.downloadFileFromiCloud(path);
     return MC.MergeModel.loadWeights(base64ToBytes(fm.read(path).toBase64String()));
@@ -716,10 +835,20 @@ async function main() {
   if (!read.piece.length) return report("Can't see the piece", "Wait until the piece is resting below the board, then try again.");
   if (read.weakCells.length || looksMidMerge(read.board)) return report("Board is moving", "The screenshot caught an animation. Try again in a moment.");
 
-  const W = await loadWeights();
-  if (!W) return report("Model file missing", `Put ${SETTINGS.weightsFile} in the Scriptable folder in iCloud Drive.`);
+  const maxmode = SETTINGS.objective === "maxmerge";
+  const file = maxmode ? SETTINGS.maxmergeWeightsFile : SETTINGS.weightsFile;
+  const W = await loadWeights(file);
+  if (!W) return report("Model file missing", `Put ${file} in the Scriptable folder in iCloud Drive.`);
 
   const unlocked = MC.MergeModel.guessUnlocked(read.board, read.piece);
+  if (maxmode) {
+    const g = MC.MergeModel.bestMoveGoal(W, MC.MergeMaxBoard, read.board, read.piece, unlocked, SETTINGS.maxmerge);
+    const pct = `${Math.round(100 * g.progress)}% of the 70,560 setup`;
+    if (g.reset) return report("Start a new game", `${g.reason === "no room" ? "This piece doesn't fit." : "A fresh game reaches the 70,560 setup sooner than this board."} (${pct})`);
+    const { title, body } = describe(read.board, g);
+    const status = g.points >= 70560 ? "🎯 THE MAXIMUM: 70,560" : g.ready ? "Setup complete: keep it, wait for a 2+4 domino" : pct;
+    return report(title, `${status}\n${body}\n${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  }
   const m = MC.MergeModel.bestMove(W, read.board, read.piece, unlocked, { depth: SETTINGS.depth, budgetMs: SETTINGS.budgetMs });
   if (!m) return report("No room", "This piece doesn't fit anywhere: the game is over.");
 

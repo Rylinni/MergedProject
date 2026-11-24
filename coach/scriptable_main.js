@@ -5,9 +5,16 @@
 // notification with the best move. Run inside Scriptable to check your latest screenshot.
 
 const SETTINGS = {
+  // "score": best total score (merge-coach-weights.bin).
+  // "maxmerge": reach the largest possible move, 70,560, in as few turns as possible
+  //             (merge-coach-maxmerge.bin); may advise starting a new game.
+  objective: "score",
   weightsFile: "merge-coach-weights.bin",
-  depth: 2,          // 1 = fast, 2 = stronger (falls back to 1 if it takes longer than budgetMs)
+  maxmergeWeightsFile: "merge-coach-maxmerge.bin",
+  depth: 2,          // score mode: 1 = fast, 2 = stronger (falls back to 1 after budgetMs)
   budgetMs: 3000,
+  // maxmerge mode: must match how the weights were trained (engine/goal.cpp)
+  maxmerge: { beta: 0.4, power: 8, gamma: 0.9995, margin: 0.15 },
 };
 
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -30,10 +37,10 @@ function base64ToBytes(s) {
   return out.subarray(0, o);
 }
 
-async function loadWeights() {
+async function loadWeights(name) {
   for (const fm of [FileManager.iCloud(), FileManager.local()]) {
     let path;
-    try { path = fm.joinPath(fm.documentsDirectory(), SETTINGS.weightsFile); } catch (e) { continue; }
+    try { path = fm.joinPath(fm.documentsDirectory(), name); } catch (e) { continue; }
     if (!fm.fileExists(path)) continue;
     if (fm.isFileStoredIniCloud && fm.isFileStoredIniCloud(path) && !fm.isFileDownloaded(path)) await fm.downloadFileFromiCloud(path);
     return MC.MergeModel.loadWeights(base64ToBytes(fm.read(path).toBase64String()));
@@ -119,10 +126,20 @@ async function main() {
   if (!read.piece.length) return report("Can't see the piece", "Wait until the piece is resting below the board, then try again.");
   if (read.weakCells.length || looksMidMerge(read.board)) return report("Board is moving", "The screenshot caught an animation. Try again in a moment.");
 
-  const W = await loadWeights();
-  if (!W) return report("Model file missing", `Put ${SETTINGS.weightsFile} in the Scriptable folder in iCloud Drive.`);
+  const maxmode = SETTINGS.objective === "maxmerge";
+  const file = maxmode ? SETTINGS.maxmergeWeightsFile : SETTINGS.weightsFile;
+  const W = await loadWeights(file);
+  if (!W) return report("Model file missing", `Put ${file} in the Scriptable folder in iCloud Drive.`);
 
   const unlocked = MC.MergeModel.guessUnlocked(read.board, read.piece);
+  if (maxmode) {
+    const g = MC.MergeModel.bestMoveGoal(W, MC.MergeMaxBoard, read.board, read.piece, unlocked, SETTINGS.maxmerge);
+    const pct = `${Math.round(100 * g.progress)}% of the 70,560 setup`;
+    if (g.reset) return report("Start a new game", `${g.reason === "no room" ? "This piece doesn't fit." : "A fresh game reaches the 70,560 setup sooner than this board."} (${pct})`);
+    const { title, body } = describe(read.board, g);
+    const status = g.points >= 70560 ? "🎯 THE MAXIMUM: 70,560" : g.ready ? "Setup complete: keep it, wait for a 2+4 domino" : pct;
+    return report(title, `${status}\n${body}\n${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  }
   const m = MC.MergeModel.bestMove(W, read.board, read.piece, unlocked, { depth: SETTINGS.depth, budgetMs: SETTINGS.budgetMs });
   if (!m) return report("No room", "This piece doesn't fit anywhere: the game is over.");
 

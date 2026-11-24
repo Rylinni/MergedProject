@@ -25,7 +25,7 @@ const sandbox = {
   Alert: class { addAction() {} async present() { out.push(["alert", this.title, this.message]); } },
   Script: { setShortcutOutput: () => {}, complete: () => {} },
 };
-const src = fs.readFileSync(path.join(coach, "dist", "Merge Coach.js"), "utf8");
+const src = fs.readFileSync(process.env.COACH_SCRIPT || path.join(coach, "dist", "Merge Coach.js"), "utf8");
 vm.createContext(sandbox);
 vm.runInContext(`(async () => {\n${src}\n})()`, sandbox).then(() => {
   for (const [kind, t, b] of out) console.log(`[${kind}] ${t}\n${b}\n`);
