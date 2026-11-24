@@ -69,4 +69,39 @@ Findings so far (all at 1-step search, 4-thread runs):
 The exact max is too rare to learn from directly, so training climbs a curriculum of targets,
 each stage starting from the previous weights: progress ≥ 0.85 → ≥ 0.95 → max-ready → 70,560.
 
-Results of each stage are added below as they finish.
+## Results
+
+Each stage starts from the previous one's weights, with resets off during training (see "Resets").
+Settings: β = 0.4, power 8, γ = 0.9995, initial weights = bigmerge_convex15000 scaled to V(empty) = 0.2.
+Episodes are evaluated on fixed seeds.
+
+| Target | Before training | After training |
+|---|---|---|
+| progress ≥ 0.85 | 3,060 turns | **705** (stage 1, `maxmerge_stage1.bin`; 200 episodes) |
+| progress ≥ 0.95 | 40,779 | **5,784** (stage 2 checkpoint, `maxmerge_stage2_ckpt600.bin`; 150 episodes) |
+| max-ready board | ~1 per 400,000 turns | **mean 46,381, median 34,352** (stage 2; 40/40 episodes) |
+| **exactly 70,560** | never in 400,000 turns | **27 of 40 runs within 1M turns; median ~514,000 turns (~1,400 games)** |
+
+Training past the stage-2 checkpoint made it worse: 10,310 turns to progress 0.95 after 900 more
+episodes. Once successes are rare, TD slowly erodes the survival skill inherited from the big-merge
+model, so each stage keeps the best checkpoint on held-out episodes.
+
+**Converting a ready board.** It gets ready about once per 51,000 turns, but only ~15% of ready
+boards become the 70,560 move: the 9 free cells sit between the required tiles, and after about
+5 pieces nothing more fits without disturbing the setup. The domino needed is 1 piece in 42. A
+"hold" rule (on a ready board, only moves that keep it ready) and a one-piece lookahead for it made
+little difference (14.7% → 15.7% in simulation from a spacious ready board).
+
+**Resets.** Resetting whenever V(fresh) beats the best move loops (a reset every ~8 turns): the
+network under-values many early boards. With a margin (reset only if better by 0.15) it resets
+3.3 times per success at stage 1, mostly a few moves before a game over, with no speed-up (695 vs
+705 turns). The coach uses margin 0.15.
+
+**What would help next.** Steer towards max boards whose free cells form one block, so the setup can
+be held for longer, and train stage 3 (target: max-ready) with checkpoints chosen on held-out episodes.
+
+## Phone
+
+`coach/merge-coach-maxmerge.bin` (stage-2 model, MNQ1 with automatic scale) and `objective:
+"maxmerge"` in Merge Coach. `coach/MAXMERGE-PATCH.md` lists the changes for an existing, locally
+modified Merge Coach.js.
