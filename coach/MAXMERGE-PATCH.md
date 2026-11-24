@@ -15,7 +15,7 @@ soon they lead to that move. It also reports:
 
 ## 1. New file
 
-Copy `coach/merge-coach-maxmerge.bin` (2,293,836 bytes) into the Scriptable iCloud folder, next to the
+Copy `coach/merge-coach-maxmerge.bin` (2,293,824 bytes) into the Scriptable iCloud folder, next to the
 existing weights. It uses the same MNQ1 format and the same 7 tuples; only the scale differs, and that
 is stored in its header.
 
