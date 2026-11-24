@@ -87,16 +87,30 @@ static double afterstate_value(const NTuple& net, const Target& tg, const Board&
     return b.empty() ? tg.shaping(b) + net.value(b) : u_fresh;
 }
 
+// Hold rule (target max): on a max-ready board, only moves that keep it max-ready are
+// considered (or the 70,560 move itself), so the board waits for the 2+4 domino.
+static bool g_hold = true;
+
 // Best move under the goal objective.
 static Choice goal_choice(const NTuple& net, const Game& g, const Move* ms, int n, const Target& tg, double gamma,
                           double u_fresh, Rng& rng) {
     Choice best;
     int ties = 0;
+    bool holding = g_hold && tg.max && max_ready(g.b, g.R);
+    if (holding) {  // is there any move that keeps the board ready (or scores the max)?
+        bool any = false;
+        for (int i = 0; i < n && !any; i++) {
+            Board nb = g.b;
+            if (apply(nb, g.next, ms[i], g.R) >= 70560 || max_ready(nb, g.R)) any = true;
+        }
+        holding = any;
+    }
     for (int i = 0; i < n; i++) {
         Board nb = g.b;
         int ch = 0;
         int64_t pts = apply(nb, g.next, ms[i], g.R, &ch);
         bool goal = tg.reached(ch, pts, nb);
+        if (holding && !goal && !max_ready(nb, g.R)) continue;
         double q = goal ? 1.0 : gamma * afterstate_value(net, tg, nb, u_fresh);
         if (q > best.q + 1e-12) { best = {i, q, goal, ch, pts}; ties = 1; }
         else if (q > best.q - 1e-12 && rng.below(++ties) == 0) best = {i, q, goal, ch, pts};
@@ -143,6 +157,7 @@ int main(int argc, char** argv) {
         else if (a == "--alpha-end") o.alpha_end = std::atof(next());
         else if (a == "--margin") o.margin = std::atof(next());
         else if (a == "--no-resets") o.resets = false;
+        else if (a == "--no-hold") g_hold = false;
         else if (a == "--threads") o.threads = std::atoi(next());
         else if (a == "--depth") o.depth = std::atoi(next());
         else if (a == "--seed") o.seed = std::strtoull(next(), nullptr, 10);

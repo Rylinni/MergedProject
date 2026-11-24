@@ -148,10 +148,21 @@
     const opt = Object.assign({ beta: 0.4, power: 8, gamma: 0.9995, margin: 0.15 }, o || {});
     const c = Uint8Array.from(board);
     const uFresh = value(W, new Uint8Array(25));
-    let best = null;
+    // Hold rule: on a max-ready board keep it ready (or score the max) whenever possible.
+    const cand = [];
     for (const [a, b] of E.legalMoves(c, piece)) {
       const nb = Uint8Array.from(c);
       const r = E.apply(nb, piece, a, b, unlocked);
+      cand.push({ a, b, nb, r });
+    }
+    let holding = MB.ready(board);
+    if (holding) {
+      for (const x of cand) x.keeps = x.r.points >= 70560 || MB.ready(x.nb);
+      holding = cand.some((x) => x.keeps);
+    }
+    let best = null;
+    for (const { a, b, nb, r, keeps } of cand) {
+      if (holding && !keeps) continue;
       let q;
       if (r.points >= 70560) q = 1;
       else {
