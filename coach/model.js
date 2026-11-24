@@ -139,7 +139,37 @@
     return m;
   }
 
-  const api = { loadWeights, value, bestMove, guessUnlocked, pieceDistribution };
+  // "Largest merge, fewest turns" objective (engine/goal.cpp --target max): the value of
+  // an afterstate is U = beta * progress^power + V (V = this network); a full board
+  // means game over, worth the same as a fresh game. A move scoring 70,560 is worth 1,
+  // any other move gamma * U(after). Advise a reset when a fresh game beats the best
+  // move by more than margin. Needs MergeMaxBoard (coach/maxboard.js).
+  function bestMoveGoal(W, MB, board, piece, unlocked, o) {
+    const opt = Object.assign({ beta: 0.4, power: 8, gamma: 0.9995, margin: 0.15 }, o || {});
+    const c = Uint8Array.from(board);
+    const uFresh = value(W, new Uint8Array(25));
+    let best = null;
+    for (const [a, b] of E.legalMoves(c, piece)) {
+      const nb = Uint8Array.from(c);
+      const r = E.apply(nb, piece, a, b, unlocked);
+      let q;
+      if (r.points >= 70560) q = 1;
+      else {
+        let empty = false;
+        for (let i = 0; i < 25; i++) if (!nb[i]) { empty = true; break; }
+        const u = empty ? opt.beta * Math.pow(MB.progress(nb), opt.power) + value(W, nb) : uFresh;
+        q = opt.gamma * u;
+      }
+      if (!best || q > best.q) best = { vals: piece, a, b, points: r.points, chain: r.chain, q, after: Array.from(nb) };
+    }
+    const inGame = board.some((v) => v !== 0);
+    const progressNow = MB.progress(board);
+    if (!best) return { reset: true, reason: "no room", progress: progressNow };
+    if (inGame && uFresh > best.q + opt.margin) return { reset: true, reason: "fresh game is better", progress: progressNow, move: best };
+    return Object.assign({ reset: false, progress: progressNow, ready: MB.ready(best.after) }, best);
+  }
+
+  const api = { loadWeights, value, bestMove, bestMoveGoal, guessUnlocked, pieceDistribution };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.MergeModel = api;
 })(this);
