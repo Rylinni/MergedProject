@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
         else usage();
     }
     const bool train = o.mode == "train";
-    if (!train && o.mode != "eval") usage();
+    if (!train && o.mode != "eval" && o.mode != "decide") usage();
     if (o.alpha_end < 0) o.alpha_end = o.alpha;
 
     NTuple net;
@@ -181,6 +181,33 @@ int main(int argc, char** argv) {
     Rules R;
     Target tg;
     tg.max = o.target_max; tg.progress = o.target_progress; tg.chain = o.chain; tg.beta = o.beta; tg.power = o.power;
+
+    // decide: for each stdin line "BOARD PIECE" (25 digits, 7 = M; piece "4" or "24"), print the
+    // best move's value q, whether a reset is advised, and the cells. Used to check coach/model.js.
+    if (o.mode == "decide") {
+        char line[128];
+        Rng rng(1);
+        while (std::fgets(line, sizeof line, stdin)) {
+            std::string ln(line);
+            if (ln.size() < 27) continue;
+            Game g(R, 1);
+            g.b.clear(); g.b.unlocked = 0xFE;
+            for (int i = 0; i < 25; i++) g.b.c[i] = uint8_t(ln[i] - '0');
+            std::string pc = ln.substr(26);
+            while (!pc.empty() && (pc.back() == '\n' || pc.back() == '\r' || pc.back() == ' ')) pc.pop_back();
+            g.next.n = uint8_t(pc.size());
+            g.next.v[0] = uint8_t(pc[0] - '0'); g.next.v[1] = pc.size() > 1 ? uint8_t(pc[1] - '0') : 0;
+            Move ms[MAX_MOVES];
+            int n = g.legal(ms);
+            double v_fresh = net.value(empty_board());
+            if (!n) { std::printf("none\n"); continue; }
+            Choice c = goal_choice(net, g, ms, n, tg, o.gamma, v_fresh, rng);
+            bool in_game = popcount(g.b.empty()) < CELLS;
+            bool reset = in_game && v_fresh > c.q + o.margin;
+            std::printf("%.9f %d %d %d %lld\n", c.q, int(reset), ms[c.idx].a, ms[c.idx].b == NONE ? -1 : ms[c.idx].b, (long long)c.pts);
+        }
+        return 0;
+    }
 
     std::atomic<long> next_ep{0};
     std::mutex mu;
